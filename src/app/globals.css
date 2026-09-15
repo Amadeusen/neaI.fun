@@ -51,3 +51,16 @@ body {
     animation: none;
   }
 }
+
+@keyframes debris-fall-3d {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.debris-fall-3d {
+  animation: debris-fall-3d 450ms ease-in forwards;
+}

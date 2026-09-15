@@ -1,6 +1,7 @@
 import type { GameEntry, GameManifest } from "./types";
 import { manifest as clickSprintManifest } from "./click-sprint/manifest";
 import { manifest as colorMatchManifest } from "./color-match/manifest";
+import { manifest as stackManifest } from "./stack/manifest";
 
 /**
  * Single source of truth for every mini-game in the app.
@@ -22,6 +23,10 @@ const registry: GameEntry[] = [
   {
     manifest: colorMatchManifest,
     load: () => import("./color-match/Game"),
+  },
+  {
+    manifest: stackManifest,
+    load: () => import("./stack/Game"),
   },
 ];
 
