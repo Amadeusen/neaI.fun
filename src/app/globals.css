@@ -54,15 +54,25 @@ body {
 
 @keyframes debris-fall-3d {
   0% {
+    transform: translate(0, 0) rotate(0deg);
     opacity: 1;
   }
   100% {
+    transform: translate(var(--fall-x, 20px), var(--fall-y, 70px)) rotate(var(--fall-rotate, 20deg));
     opacity: 0;
   }
 }
 
 .debris-fall-3d {
-  animation: debris-fall-3d 450ms ease-in forwards;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: debris-fall-3d 550ms cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .debris-fall-3d {
+    animation: debris-fall-3d 450ms linear forwards;
+  }
 }
 
 @keyframes landscape-drift {

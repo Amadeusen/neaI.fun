@@ -1,43 +1,26 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { manifest } from "./manifest";
-import { project, hexToHsl, hsl, pointsAttr, type Point } from "./projection";
 import { StackBackground } from "./StackBackground";
+import { BlockMesh } from "./BlockMesh";
+import { blockPoints, blockScreenCenter } from "./geometry";
+import {
+  BASE_SIZE,
+  BASE_SPEED,
+  BLOCK_HEIGHT,
+  CANVAS_H,
+  CANVAS_W,
+  GAME_SIZE,
+  MAX_SPEED,
+  MIN_OVERLAP,
+  SPEED_STEP,
+  VIEW_H,
+  VIEW_PAD,
+  VIEW_W,
+} from "./constants";
+import type { Axis, Block, Debris, Phase } from "./types";
 
-const ACCENT = manifest.accentColor;
-const [ACCENT_HUE, ACCENT_SAT, ACCENT_LIGHT] = hexToHsl(ACCENT);
-const HUE_STEP = 5;
-
-const GAME_SIZE = 150;
-const BASE_SIZE = 92;
-const BLOCK_HEIGHT = 22;
-const BASE_SPEED = 90;
-const SPEED_STEP = 3.5;
-const MAX_SPEED = 220;
-const MIN_OVERLAP = 4;
-
-const CANVAS_W = 300;
-const CANVAS_H = 420;
-const VIEW_W = 190;
-const VIEW_H = (VIEW_W * CANVAS_H) / CANVAS_W;
-const VIEW_PAD = 24;
-const CENTER = GAME_SIZE / 2;
-
-interface Block {
-  x: number;
-  y: number;
-  width: number;
-  depth: number;
-}
-
-type Axis = "x" | "y";
-type Phase = "idle" | "playing" | "over";
-
-interface Debris extends Block {
-  id: number;
-  bottom: number;
-}
+const DEBRIS_LIFETIME_MS = 550;
 
 function baseBlock(): Block {
   const offset = (GAME_SIZE - BASE_SIZE) / 2;
@@ -48,55 +31,15 @@ function axisForIndex(index: number): Axis {
   return index % 2 === 1 ? "x" : "y";
 }
 
-function faces(block: Block, z0: number, z1: number) {
-  const x0 = block.x - CENTER;
-  const x1 = block.x + block.width - CENTER;
-  const y0 = block.y - CENTER;
-  const y1 = block.y + block.depth - CENTER;
-
-  const b = project(x1, y0, z0);
-  const c = project(x1, y1, z0);
-  const d = project(x0, y1, z0);
-  const e = project(x0, y0, z1);
-  const f = project(x1, y0, z1);
-  const g = project(x1, y1, z1);
-  const h = project(x0, y1, z1);
-
+/** Picks a fall trajectory that drifts the piece away from the tower's center. */
+function fallTrajectory(piece: Block, layerIndex: number) {
+  const [screenX] = blockScreenCenter(piece, layerIndex);
+  const side = screenX >= 0 ? 1 : -1;
   return {
-    top: [e, f, g, h] as Point[],
-    right: [b, f, g, c] as Point[],
-    left: [c, d, h, g] as Point[],
+    fallX: side * (18 + Math.random() * 16),
+    fallY: 55 + Math.random() * 30,
+    fallRotate: side * (16 + Math.random() * 22),
   };
-}
-
-function blockPoints(block: Block, index: number): Point[] {
-  const z0 = index * BLOCK_HEIGHT;
-  const z1 = z0 + BLOCK_HEIGHT;
-  const f = faces(block, z0, z1);
-  return [...f.top, ...f.right, ...f.left];
-}
-
-function BlockMesh({
-  block,
-  index,
-  opacity = 1,
-}: {
-  block: Block;
-  index: number;
-  opacity?: number;
-}) {
-  const z0 = index * BLOCK_HEIGHT;
-  const z1 = z0 + BLOCK_HEIGHT;
-  const f = faces(block, z0, z1);
-  const hue = ACCENT_HUE + index * HUE_STEP;
-
-  return (
-    <g opacity={opacity}>
-      <polygon points={pointsAttr(f.left)} fill={hsl(hue, ACCENT_SAT, ACCENT_LIGHT - 24)} />
-      <polygon points={pointsAttr(f.right)} fill={hsl(hue, ACCENT_SAT, ACCENT_LIGHT - 6)} />
-      <polygon points={pointsAttr(f.top)} fill={hsl(hue, ACCENT_SAT, ACCENT_LIGHT + 20)} />
-    </g>
-  );
 }
 
 export default function Stack() {
@@ -174,32 +117,31 @@ export default function Stack() {
     rafRef.current = requestAnimationFrame(tick);
   };
 
+  /** Turns leftover (trimmed-off) pieces into falling debris that clears itself up. */
+  const spawnDebris = (pieces: Block[], layerIndex: number) => {
+    if (!pieces.length) return;
+    const bottom = layerIndex * BLOCK_HEIGHT;
+    const newPieces: Debris[] = pieces.map((piece) => ({
+      ...piece,
+      id: debrisId.current++,
+      bottom,
+      ...fallTrajectory(piece, layerIndex),
+    }));
+    setDebris((d) => [...d, ...newPieces]);
+    newPieces.forEach((piece) => {
+      window.setTimeout(() => {
+        setDebris((d) => d.filter((p) => p.id !== piece.id));
+      }, DEBRIS_LIFETIME_MS);
+    });
+  };
+
   const drop = () => {
     if (phase !== "playing" || !current) return;
     const axis = axisRef.current;
 
     setBlocks((prev) => {
       const top = prev[prev.length - 1];
-      const bottom = prev.length * BLOCK_HEIGHT;
-
-      const buildPieces = (
-        overlap: Block,
-        leftoverA: Block | null,
-        leftoverB: Block | null,
-      ) => {
-        const pieces: Debris[] = [];
-        if (leftoverA) pieces.push({ ...leftoverA, id: debrisId.current++, bottom });
-        if (leftoverB) pieces.push({ ...leftoverB, id: debrisId.current++, bottom });
-        if (pieces.length) {
-          setDebris((d) => [...d, ...pieces]);
-          pieces.forEach((piece) => {
-            window.setTimeout(() => {
-              setDebris((d) => d.filter((p) => p.id !== piece.id));
-            }, 450);
-          });
-        }
-        return overlap;
-      };
+      const layerIndex = prev.length;
 
       if (axis === "x") {
         const start = Math.max(current.x, top.x);
@@ -211,22 +153,18 @@ export default function Stack() {
           setPhase("over");
           return prev;
         }
-        const leftoverA =
-          current.x < start
-            ? { x: current.x, y: current.y, width: start - current.x, depth: current.depth }
-            : null;
+        const pieces: Block[] = [];
+        if (current.x < start) {
+          pieces.push({ x: current.x, y: current.y, width: start - current.x, depth: current.depth });
+        }
         const rightStart = start + overlap;
         const rightEnd = current.x + current.width;
-        const leftoverB =
-          rightEnd > rightStart
-            ? { x: rightStart, y: current.y, width: rightEnd - rightStart, depth: current.depth }
-            : null;
+        if (rightEnd > rightStart) {
+          pieces.push({ x: rightStart, y: current.y, width: rightEnd - rightStart, depth: current.depth });
+        }
+        spawnDebris(pieces, layerIndex);
 
-        const newBlock: Block = buildPieces(
-          { x: start, y: top.y, width: overlap, depth: top.depth },
-          leftoverA,
-          leftoverB,
-        );
+        const newBlock: Block = { x: start, y: top.y, width: overlap, depth: top.depth };
         speedRef.current = Math.min(MAX_SPEED, speedRef.current + SPEED_STEP);
         spawnNext(newBlock, prev.length + 1);
         return [...prev, newBlock];
@@ -241,22 +179,18 @@ export default function Stack() {
         setPhase("over");
         return prev;
       }
-      const leftoverA =
-        current.y < start
-          ? { x: current.x, y: current.y, width: current.width, depth: start - current.y }
-          : null;
+      const pieces: Block[] = [];
+      if (current.y < start) {
+        pieces.push({ x: current.x, y: current.y, width: current.width, depth: start - current.y });
+      }
       const farStart = start + overlap;
       const farEnd = current.y + current.depth;
-      const leftoverB =
-        farEnd > farStart
-          ? { x: current.x, y: farStart, width: current.width, depth: farEnd - farStart }
-          : null;
+      if (farEnd > farStart) {
+        pieces.push({ x: current.x, y: farStart, width: current.width, depth: farEnd - farStart });
+      }
+      spawnDebris(pieces, layerIndex);
 
-      const newBlock: Block = buildPieces(
-        { x: top.x, y: start, width: top.width, depth: overlap },
-        leftoverA,
-        leftoverB,
-      );
+      const newBlock: Block = { x: top.x, y: start, width: top.width, depth: overlap };
       speedRef.current = Math.min(MAX_SPEED, speedRef.current + SPEED_STEP);
       spawnNext(newBlock, prev.length + 1);
       return [...prev, newBlock];
@@ -286,9 +220,7 @@ export default function Stack() {
   const naturalHeight = naturalMaxY - naturalMinY;
 
   const viewMinY =
-    naturalHeight <= VIEW_H
-      ? naturalMinY - (VIEW_H - naturalHeight) / 2
-      : naturalMinY;
+    naturalHeight <= VIEW_H ? naturalMinY - (VIEW_H - naturalHeight) / 2 : naturalMinY;
 
   const viewBox = `${-VIEW_W / 2} ${viewMinY} ${VIEW_W} ${VIEW_H}`;
 
@@ -322,7 +254,17 @@ export default function Stack() {
           ))}
 
           {debris.map((d) => (
-            <g key={d.id} className="debris-fall-3d">
+            <g
+              key={d.id}
+              className="debris-fall-3d"
+              style={
+                {
+                  "--fall-x": `${d.fallX}px`,
+                  "--fall-y": `${d.fallY}px`,
+                  "--fall-rotate": `${d.fallRotate}deg`,
+                } as React.CSSProperties
+              }
+            >
               <BlockMesh block={d} index={Math.round(d.bottom / BLOCK_HEIGHT)} />
             </g>
           ))}
