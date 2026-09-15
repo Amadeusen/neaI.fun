@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { StackBackground } from "./StackBackground";
+import { Ground } from "./Ground";
 import { BlockMesh } from "./BlockMesh";
 import { blockPoints, blockScreenCenter } from "./geometry";
 import {
@@ -249,6 +250,8 @@ export default function Stack() {
           height={CANVAS_H}
           viewBox={viewBox}
         >
+          <Ground score={score} />
+
           {blocks.map((block, i) => (
             <BlockMesh key={i} block={block} index={i} />
           ))}

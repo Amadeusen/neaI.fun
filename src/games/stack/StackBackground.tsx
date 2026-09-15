@@ -46,12 +46,16 @@ const STARS = Array.from({ length: 22 }, (_, i) => ({
   o: 0.35 + ((i * 13) % 60) / 100,
 }));
 
-/** Score-driven backdrop: rolling hills + clouds near the ground, fading to a starry sky as the tower climbs. */
+/**
+ * Score-driven sky: clouds fading to a starry night as the tower climbs.
+ * The ground itself is drawn separately, inside the tower's own <svg>
+ * (see Ground.tsx), so it always aligns with the base regardless of camera
+ * panning — this layer only ever needs to fill the canvas edge-to-edge.
+ */
 export function StackBackground({ score }: { score: number }) {
   const { top, bottom } = skyColors(score);
   const starOpacity = Math.min(1, Math.max(0, (score - 22) / 18));
   const cloudOpacity = Math.min(1, Math.max(0, 1 - score / 18));
-  const hillOpacity = Math.min(1, Math.max(0, 1 - score / 32));
 
   return (
     <div className="absolute inset-0 overflow-hidden" aria-hidden>
@@ -82,20 +86,6 @@ export function StackBackground({ score }: { score: number }) {
         <div
           className="landscape-drift absolute rounded-full bg-white/45 blur-md"
           style={{ width: 56, height: 20, left: "76%", top: "10%", animationDelay: "-12s" }}
-        />
-      </div>
-
-      <div
-        className="absolute inset-x-0 bottom-0 transition-opacity duration-700"
-        style={{ opacity: hillOpacity, height: "45%" }}
-      >
-        <div
-          className="landscape-drift-slow absolute rounded-[50%] bg-emerald-800/70"
-          style={{ width: "150%", height: "70%", left: "-25%", bottom: "-35%" }}
-        />
-        <div
-          className="landscape-drift-slow absolute rounded-[50%] bg-emerald-700/55"
-          style={{ width: "170%", height: "55%", left: "-35%", bottom: "-30%", animationDelay: "-9s" }}
         />
       </div>
     </div>
