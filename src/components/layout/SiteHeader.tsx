@@ -3,9 +3,9 @@ import { Container } from "@/components/ui/Container";
 
 export function SiteHeader() {
   return (
-    <header className="border-b border-black/5 py-5 dark:border-white/10">
+    <header className="sticky top-0 z-10 border-b border-black/5 bg-[var(--background)]/70 py-5 backdrop-blur-md dark:border-white/10">
       <Container className="flex items-center justify-between">
-        <Link href="/" className="text-lg font-bold tracking-tight">
+        <Link href="/" className="font-display text-lg font-bold tracking-tight">
           Playground
         </Link>
         <span className="text-sm text-neutral-500">A hub of tiny experiments</span>
