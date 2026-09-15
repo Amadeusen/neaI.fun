@@ -23,3 +23,36 @@ export function shadeColor(hex: string, percent: number): string {
 export function pointsAttr(points: Point[]): string {
   return points.map(([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`).join(" ");
 }
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+/** Converts a hex color to [hue 0-360, saturation 0-100, lightness 0-100]. */
+export function hexToHsl(hex: string): [number, number, number] {
+  const num = parseInt(hex.replace("#", ""), 16);
+  const r = ((num >> 16) & 0xff) / 255;
+  const g = ((num >> 8) & 0xff) / 255;
+  const b = (num & 0xff) / 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  const d = max - min;
+
+  if (d === 0) return [0, 0, l * 100];
+
+  const s = d / (1 - Math.abs(2 * l - 1));
+  let h: number;
+  if (max === r) h = ((g - b) / d) % 6;
+  else if (max === g) h = (b - r) / d + 2;
+  else h = (r - g) / d + 4;
+  h *= 60;
+  if (h < 0) h += 360;
+
+  return [h, s * 100, l * 100];
+}
+
+export function hsl(h: number, s: number, l: number): string {
+  const hue = ((h % 360) + 360) % 360;
+  return `hsl(${hue.toFixed(1)}, ${clamp(s, 0, 100).toFixed(1)}%, ${clamp(l, 0, 100).toFixed(1)}%)`;
+}

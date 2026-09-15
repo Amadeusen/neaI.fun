@@ -2,9 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { manifest } from "./manifest";
-import { project, shadeColor, pointsAttr, type Point } from "./projection";
+import { project, hexToHsl, hsl, pointsAttr, type Point } from "./projection";
+import { StackBackground } from "./StackBackground";
 
 const ACCENT = manifest.accentColor;
+const [ACCENT_HUE, ACCENT_SAT, ACCENT_LIGHT] = hexToHsl(ACCENT);
+const HUE_STEP = 5;
 
 const GAME_SIZE = 150;
 const BASE_SIZE = 92;
@@ -85,13 +88,13 @@ function BlockMesh({
   const z0 = index * BLOCK_HEIGHT;
   const z1 = z0 + BLOCK_HEIGHT;
   const f = faces(block, z0, z1);
-  const lift = Math.min(index * 0.025, 0.45);
+  const hue = ACCENT_HUE + index * HUE_STEP;
 
   return (
     <g opacity={opacity}>
-      <polygon points={pointsAttr(f.left)} fill={shadeColor(ACCENT, -0.32 + lift * 0.3)} />
-      <polygon points={pointsAttr(f.right)} fill={shadeColor(ACCENT, -0.08 + lift * 0.4)} />
-      <polygon points={pointsAttr(f.top)} fill={shadeColor(ACCENT, 0.28 + lift)} />
+      <polygon points={pointsAttr(f.left)} fill={hsl(hue, ACCENT_SAT, ACCENT_LIGHT - 24)} />
+      <polygon points={pointsAttr(f.right)} fill={hsl(hue, ACCENT_SAT, ACCENT_LIGHT - 6)} />
+      <polygon points={pointsAttr(f.top)} fill={hsl(hue, ACCENT_SAT, ACCENT_LIGHT + 20)} />
     </g>
   );
 }
@@ -267,9 +270,12 @@ export default function Stack() {
 
   const score = Math.max(0, blocks.length - 1);
 
-  const topIndex = current ? blocks.length : blocks.length - 1;
-  const topBlock = current ?? blocks[blocks.length - 1];
-  const topPts = blockPoints(topBlock, topIndex);
+  // Framing is derived only from placed blocks (never the live, oscillating
+  // `current` block) so the camera holds still while a piece is in flight
+  // and only resettles when a block actually lands.
+  const lastPlaced = blocks[blocks.length - 1];
+  const topIndex = phase === "playing" ? blocks.length : blocks.length - 1;
+  const topPts = blockPoints(lastPlaced, topIndex);
   const topY = Math.min(...topPts.map((p) => p[1]));
 
   const basePts = blockPoints(blocks[0], 0);
@@ -300,14 +306,16 @@ export default function Stack() {
             handleActivate();
           }
         }}
-        className="relative select-none overflow-hidden rounded-xl border border-black/10 bg-gradient-to-b from-black/[0.02] to-black/[0.08] outline-none dark:border-white/10 dark:from-white/[0.02] dark:to-black/40"
+        className="relative select-none overflow-hidden rounded-xl border border-black/10 outline-none dark:border-white/10"
         style={{ width: CANVAS_W, height: CANVAS_H }}
       >
+        <StackBackground score={score} />
+
         <svg
+          className="relative transition-[view-box] duration-150 ease-out"
           width={CANVAS_W}
           height={CANVAS_H}
           viewBox={viewBox}
-          className="transition-[view-box] duration-150 ease-out"
         >
           {blocks.map((block, i) => (
             <BlockMesh key={i} block={block} index={i} />

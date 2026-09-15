@@ -64,3 +64,42 @@ body {
 .debris-fall-3d {
   animation: debris-fall-3d 450ms ease-in forwards;
 }
+
+@keyframes landscape-drift {
+  0% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(14px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.landscape-drift {
+  animation: landscape-drift 18s ease-in-out infinite;
+}
+
+@keyframes landscape-drift-slow {
+  0% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(-10px);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.landscape-drift-slow {
+  animation: landscape-drift-slow 30s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landscape-drift,
+  .landscape-drift-slow {
+    animation: none;
+  }
+}
