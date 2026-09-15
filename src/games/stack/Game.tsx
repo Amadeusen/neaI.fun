@@ -16,10 +16,9 @@ const MIN_OVERLAP = 4;
 
 const CANVAS_W = 300;
 const CANVAS_H = 420;
-const VIEW_W = 200;
+const VIEW_W = 190;
 const VIEW_H = (VIEW_W * CANVAS_H) / CANVAS_W;
-const FOLLOW_START = 70;
-const VIEW_MARGIN = 30;
+const VIEW_PAD = 24;
 const CENTER = GAME_SIZE / 2;
 
 interface Block {
@@ -65,6 +64,13 @@ function faces(block: Block, z0: number, z1: number) {
     right: [b, f, g, c] as Point[],
     left: [c, d, h, g] as Point[],
   };
+}
+
+function blockPoints(block: Block, index: number): Point[] {
+  const z0 = index * BLOCK_HEIGHT;
+  const z1 = z0 + BLOCK_HEIGHT;
+  const f = faces(block, z0, z1);
+  return [...f.top, ...f.right, ...f.left];
 }
 
 function BlockMesh({
@@ -260,8 +266,24 @@ export default function Stack() {
   };
 
   const score = Math.max(0, blocks.length - 1);
-  const topZ = blocks.length * BLOCK_HEIGHT;
-  const viewMinY = -Math.max(topZ - FOLLOW_START, 0) - VIEW_MARGIN;
+
+  const topIndex = current ? blocks.length : blocks.length - 1;
+  const topBlock = current ?? blocks[blocks.length - 1];
+  const topPts = blockPoints(topBlock, topIndex);
+  const topY = Math.min(...topPts.map((p) => p[1]));
+
+  const basePts = blockPoints(blocks[0], 0);
+  const baseBottomY = Math.max(...basePts.map((p) => p[1]));
+
+  const naturalMinY = topY - VIEW_PAD;
+  const naturalMaxY = baseBottomY + VIEW_PAD;
+  const naturalHeight = naturalMaxY - naturalMinY;
+
+  const viewMinY =
+    naturalHeight <= VIEW_H
+      ? naturalMinY - (VIEW_H - naturalHeight) / 2
+      : naturalMinY;
+
   const viewBox = `${-VIEW_W / 2} ${viewMinY} ${VIEW_W} ${VIEW_H}`;
 
   return (
@@ -293,10 +315,7 @@ export default function Stack() {
 
           {debris.map((d) => (
             <g key={d.id} className="debris-fall-3d">
-              <BlockMesh
-                block={d}
-                index={Math.round(d.bottom / BLOCK_HEIGHT) - 1}
-              />
+              <BlockMesh block={d} index={Math.round(d.bottom / BLOCK_HEIGHT)} />
             </g>
           ))}
 
