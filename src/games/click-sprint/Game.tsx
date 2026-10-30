@@ -1,99 +1,135 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useBestScore } from "@/lib/storage";
+import { manifest } from "./manifest";
 
-const ROUND_SECONDS = 10;
+const ROUND_MS = 10_000;
+const TICK_MS = 100;
 
 type Phase = "idle" | "running" | "done";
 
 export default function ClickSprint() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [clicks, setClicks] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(ROUND_SECONDS);
+  const [msLeft, setMsLeft] = useState(ROUND_MS);
+  const [bestBeforeRun, setBestBeforeRun] = useState<number | null>(null);
+  const { best, submit } = useBestScore(manifest.slug);
+
+  const clicksRef = useRef(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const stopTimer = useCallback(() => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-  }, []);
+  const stopTimer = () => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    intervalRef.current = null;
+  };
 
-  useEffect(() => stopTimer, [stopTimer]);
+  useEffect(() => stopTimer, []);
 
   const start = () => {
     stopTimer();
-    setPhase("running");
+    clicksRef.current = 1;
     setClicks(1);
-    setTimeLeft(ROUND_SECONDS);
+    setMsLeft(ROUND_MS);
+    setBestBeforeRun(best);
+    setPhase("running");
 
+    const endsAt = performance.now() + ROUND_MS;
     intervalRef.current = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          stopTimer();
-          setPhase("done");
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
+      const left = Math.max(0, endsAt - performance.now());
+      setMsLeft(left);
+      if (left === 0) {
+        stopTimer();
+        setPhase("done");
+        submit(clicksRef.current);
+      }
+    }, TICK_MS);
   };
 
   const handleTap = () => {
     if (phase === "idle") {
       start();
-      return;
-    }
-    if (phase === "running") {
-      setClicks((c) => c + 1);
+    } else if (phase === "running") {
+      clicksRef.current += 1;
+      setClicks(clicksRef.current);
     }
   };
 
-  const reset = () => {
-    stopTimer();
-    setPhase("idle");
-    setClicks(0);
-    setTimeLeft(ROUND_SECONDS);
-  };
-
-  const cps = (clicks / ROUND_SECONDS).toFixed(1);
+  const cps = (clicks / (ROUND_MS / 1000)).toFixed(1);
+  const isNewBest = phase === "done" && clicks > (bestBeforeRun ?? 0);
+  const progress = msLeft / ROUND_MS;
 
   return (
-    <div className="flex flex-col items-center gap-6 text-center">
-      <div className="flex items-baseline gap-8 font-mono text-lg">
-        <span>
-          Time: <strong className="text-2xl">{timeLeft}</strong>s
+    <div className="flex h-full w-full max-w-md flex-col items-center justify-center gap-[4dvh]">
+      <div className="flex flex-wrap justify-center gap-2">
+        <span className="pill">
+          Time <strong>{(msLeft / 1000).toFixed(1)}</strong>s
         </span>
-        <span>
-          Clicks: <strong className="text-2xl">{clicks}</strong>
+        <span className="pill">
+          Clicks <strong>{clicks}</strong>
         </span>
+        {best !== null && (
+          <span className="pill">
+            Best <strong>{best}</strong>
+          </span>
+        )}
       </div>
 
-      <button
-        type="button"
-        onClick={handleTap}
-        disabled={phase === "done"}
-        className="flex h-56 w-56 select-none items-center justify-center rounded-full bg-[var(--game-accent)] text-2xl font-bold text-white shadow-lg transition-transform active:scale-95 disabled:opacity-40 sm:h-64 sm:w-64"
-      >
-        {phase === "idle" && "Start"}
-        {phase === "running" && "Click!"}
-        {phase === "done" && "Time!"}
-      </button>
+      <div className="relative grid size-[min(72vw,46dvh)] place-items-center">
+        {/* Countdown ring around the button. */}
+        <svg viewBox="0 0 100 100" className="absolute inset-0 -rotate-90" aria-hidden>
+          <circle cx="50" cy="50" r="48" fill="none" stroke="rgb(0 0 0 / 0.08)" strokeWidth="3" />
+          <circle
+            cx="50"
+            cy="50"
+            r="48"
+            fill="none"
+            stroke="var(--game-accent)"
+            strokeWidth="3"
+            strokeLinecap="round"
+            pathLength={1}
+            strokeDasharray="1"
+            strokeDashoffset={1 - progress}
+            className="transition-[stroke-dashoffset] duration-100 ease-linear"
+          />
+        </svg>
 
-      {phase === "done" && (
-        <div className="flex flex-col items-center gap-3">
-          <p className="text-xl font-semibold">
-            {clicks} clicks — {cps} clicks/sec
+        <button
+          type="button"
+          onPointerDown={handleTap}
+          onKeyDown={(e) => {
+            if (e.key === " " || e.key === "Enter") {
+              e.preventDefault();
+              if (!e.repeat) handleTap();
+            }
+          }}
+          disabled={phase === "done"}
+          className="font-display size-[88%] touch-manipulation rounded-full bg-accent text-3xl font-bold text-white shadow-[0_8px_0_rgb(0_0_0/0.18)] transition-transform select-none active:translate-y-1 active:shadow-[0_4px_0_rgb(0_0_0/0.18)] disabled:opacity-40 sm:text-4xl"
+        >
+          {phase === "idle" && "Start"}
+          {phase === "running" && "Click!"}
+          {phase === "done" && "Time!"}
+        </button>
+      </div>
+
+      <div className="flex min-h-24 flex-col items-center gap-3 text-center">
+        {phase === "idle" && (
+          <p className="max-w-64 text-sm text-ink-muted">
+            The clock starts on your first click. You get ten seconds.
           </p>
-          <button
-            type="button"
-            onClick={reset}
-            className="rounded-full border border-current px-5 py-2 text-sm font-medium transition-opacity hover:opacity-70"
-          >
-            Try again
-          </button>
-        </div>
-      )}
+        )}
+        {phase === "done" && (
+          <>
+            <p className="font-display text-2xl font-bold">
+              {isNewBest ? "New best! " : ""}
+              {clicks} clicks · {cps}/s
+            </p>
+            <button type="button" onClick={start} className="btn">
+              Play again
+            </button>
+          </>
+        )}
+      </div>
     </div>
   );
 }
