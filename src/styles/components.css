@@ -1,0 +1,71 @@
+/*
+ * Small shared building blocks for game screens. They read the per-screen
+ * variables from tokens.css, so the same button looks at home on any screen.
+ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1.6rem;
+  border-radius: var(--radius-pill);
+  background: var(--game-accent);
+  color: #fff;
+  font-family: var(--font-fredoka), var(--font-geist-sans), sans-serif;
+  font-size: 1.125rem;
+  font-weight: 600;
+  box-shadow: var(--shadow-press);
+  transition:
+    transform 80ms ease-out,
+    box-shadow 80ms ease-out;
+  user-select: none;
+}
+
+.btn:active {
+  transform: translateY(3px);
+  box-shadow: none;
+}
+
+.btn-light {
+  background: #fff;
+  color: var(--ink);
+}
+
+/* Compact stat readout ("Score 12", "Best 30"). */
+.pill {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  padding: 0.3rem 0.85rem;
+  border-radius: var(--radius-pill);
+  background: rgb(255 255 255 / 0.75);
+  color: var(--ink);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.pill strong {
+  font-family: var(--font-fredoka), var(--font-geist-sans), sans-serif;
+  font-size: 1.125rem;
+}
+
+/* Full-cover message layer used for "tap to start" and "game over". */
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.9rem;
+  padding: 1.5rem;
+  text-align: center;
+  animation: pop-in 180ms ease-out;
+}
+
+.overlay-dim {
+  background: rgb(0 0 0 / 0.45);
+  color: #fff;
+  backdrop-filter: blur(3px);
+}
