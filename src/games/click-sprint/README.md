@@ -21,9 +21,9 @@ your clicks per second; a new best gets confetti and a fanfare.
 
 ## Notes
 
-- The timer compares against a fixed end time (`performance.now()`) every
-  100 ms instead of counting ticks, so it stays accurate even if the tab
-  lags.
+- The clock is the shared `useCountdown` hook: it compares against a fixed
+  end time every 100 ms instead of counting ticks, so it stays accurate
+  even if the tab lags.
 - The button reacts on `pointerdown`, not `click`, so fast tapping on
   phones registers every press. Space and Enter also work.
 - `ROUND_MS`, `TICK_MS` and `URGENT_SECONDS` at the top of

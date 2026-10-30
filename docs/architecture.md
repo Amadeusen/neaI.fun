@@ -12,6 +12,8 @@ src/
     layout.tsx                  Root <html>: fonts, default metadata, viewport
     globals.css                 Tailwind entry; imports src/styles/* and maps tokens
     page.tsx                    "/"  home page: logo, subtitle, tile grid
+    not-found.tsx               Styled 404 page (exported as 404.html)
+    icon.svg                    Favicon
     stack/page.tsx              "/stack"
     click-sprint/page.tsx       "/click-sprint"
     color-match/page.tsx        "/color-match"
@@ -24,6 +26,7 @@ src/
 
   components/                   UI shared by several pages
     shared/Logo.tsx             "neaI.fun" wordmark (home title + game top bar)
+    shared/cursor.ts            Mouse-pointer SVG path shared by tiles and titles
     home/GameTile.tsx           Wide tile on the home page
     game/GameScreen.tsx         Full-viewport frame around every game
     game/Confetti.tsx           One-shot confetti burst for new bests
@@ -36,6 +39,8 @@ src/
     haptics.ts                  Light / medium / heavy phone vibrations
     useAspectRatio.ts           Measures an element's width / height
     useKeyPress.ts              Page-wide key handler (space to play)
+    useCountdown.ts             Accurate countdown clock with bonus time
+    useTimeouts.ts              setTimeout that is cancelled on unmount
     utils.ts                    cn() class-name joiner
 ```
 
@@ -94,6 +99,10 @@ Follow that split whenever a game grows past a single small file.
   with `playground:`, guards every access with try/catch (storage can be
   blocked), and exposes a `useSyncExternalStore` hook so the server render
   and the first client render match.
+- Delayed actions use `useTimeouts()` and clocks use `useCountdown()`
+  (both in `src/lib/`), never raw `setTimeout` / `setInterval`, so nothing
+  keeps running, playing sounds or setting state after the player leaves a
+  game.
 
 ## Conventions
 

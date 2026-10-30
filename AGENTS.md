@@ -35,6 +35,9 @@ changing structure, and `docs/adding-a-game.md` before adding a game.
 
 ## Code rules
 
+- No raw `setTimeout` / `setInterval` / `addEventListener` in games: use
+  `useTimeouts`, `useCountdown` and `useKeyPress` from `src/lib/`, which
+  clean up on unmount.
 - **Keep files short**: aim for under 150 lines, never over 200. When a file
   grows, split it by role: pure rules/math (`.ts`, no React), state hooks
   (`useX.ts`), rendering components, and a thin `Game.tsx` that assembles

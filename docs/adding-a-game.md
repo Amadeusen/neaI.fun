@@ -65,6 +65,9 @@ Rules of thumb:
   `Game.tsx` that assembles them; Stack is the reference.
 - Don't touch `window` or `localStorage` during render; do it in effects,
   event handlers, or through `src/lib/storage.ts`.
+- For delays use `useTimeouts()`, for a game clock `useCountdown()`, for
+  page-wide keys `useKeyPress()` (all in `src/lib/`): they clean up after
+  themselves when the player leaves.
 
 ## 3. Thumbnail
 
