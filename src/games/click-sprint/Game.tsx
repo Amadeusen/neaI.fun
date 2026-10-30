@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useBestScore } from "@/lib/storage";
+import { CountdownRing } from "./CountdownRing";
 import { manifest } from "./manifest";
 
 const ROUND_MS = 10_000;
@@ -13,7 +14,7 @@ export default function ClickSprint() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [clicks, setClicks] = useState(0);
   const [msLeft, setMsLeft] = useState(ROUND_MS);
-  const [bestBeforeRun, setBestBeforeRun] = useState<number | null>(null);
+  const [isNewBest, setIsNewBest] = useState(false);
   const { best, submit } = useBestScore(manifest.slug);
 
   const clicksRef = useRef(0);
@@ -31,7 +32,7 @@ export default function ClickSprint() {
     clicksRef.current = 1;
     setClicks(1);
     setMsLeft(ROUND_MS);
-    setBestBeforeRun(best);
+    setIsNewBest(false);
     setPhase("running");
 
     const endsAt = performance.now() + ROUND_MS;
@@ -41,7 +42,7 @@ export default function ClickSprint() {
       if (left === 0) {
         stopTimer();
         setPhase("done");
-        submit(clicksRef.current);
+        setIsNewBest(submit(clicksRef.current));
       }
     }, TICK_MS);
   };
@@ -56,7 +57,6 @@ export default function ClickSprint() {
   };
 
   const cps = (clicks / (ROUND_MS / 1000)).toFixed(1);
-  const isNewBest = phase === "done" && clicks > (bestBeforeRun ?? 0);
   const progress = msLeft / ROUND_MS;
 
   return (
@@ -76,23 +76,7 @@ export default function ClickSprint() {
       </div>
 
       <div className="relative grid size-[min(72vw,46dvh)] place-items-center">
-        {/* Countdown ring around the button. */}
-        <svg viewBox="0 0 100 100" className="absolute inset-0 -rotate-90" aria-hidden>
-          <circle cx="50" cy="50" r="48" fill="none" stroke="rgb(0 0 0 / 0.08)" strokeWidth="3" />
-          <circle
-            cx="50"
-            cy="50"
-            r="48"
-            fill="none"
-            stroke="var(--game-accent)"
-            strokeWidth="3"
-            strokeLinecap="round"
-            pathLength={1}
-            strokeDasharray="1"
-            strokeDashoffset={1 - progress}
-            className="transition-[stroke-dashoffset] duration-100 ease-linear"
-          />
-        </svg>
+        <CountdownRing progress={progress} />
 
         <button
           type="button"
