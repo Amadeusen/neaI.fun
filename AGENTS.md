@@ -51,6 +51,5 @@ changing structure, and `docs/adding-a-game.md` before adding a game.
 ## Workflow
 
 - Check `npm run lint` and `npm run build` before committing.
-- Make small commits: one logical change per commit.
 - When a choice is ambiguous, ask the user (with clickable options) instead
   of assuming.
