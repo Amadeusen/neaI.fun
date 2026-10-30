@@ -1,74 +1,101 @@
-/* Keyframes and the utility classes that use them. */
+/*
+ * Shared "juice" animations any game can use. Replay one by re-mounting the
+ * element (change its React `key`). Game-specific keyframes live in
+ * game-animations.css.
+ */
 
 @keyframes pop-in {
-  from {
-    opacity: 0;
-    transform: scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
 }
 
-@keyframes debris-fall-3d {
-  0% {
-    transform: translate(0, 0) rotate(0deg);
-    opacity: 1;
-  }
-  100% {
-    transform: translate(var(--fall-x, 20px), var(--fall-y, 70px)) rotate(var(--fall-rotate, 20deg));
-    opacity: 0;
-  }
+/* Springy entrance: overshoots then settles. */
+@keyframes pop {
+  0% { transform: scale(0.4); opacity: 0; }
+  60% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); }
 }
+.pop { animation: pop 320ms cubic-bezier(0.2, 0.9, 0.3, 1.3) both; }
 
-.debris-fall-3d {
+/* A quick swell for numbers that just changed. */
+@keyframes bump {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+.bump { animation: bump 260ms ease-out; }
+
+/* Text that drifts up and fades ("+1", "Perfect!"). */
+@keyframes float-up {
+  0% { transform: translate(-50%, 0) scale(0.7); opacity: 0; }
+  15% { transform: translate(-50%, -8px) scale(1.1); opacity: 1; }
+  100% { transform: translate(-50%, -70px) scale(1); opacity: 0; }
+}
+.float-up { animation: float-up 800ms ease-out forwards; }
+
+/* An expanding ring that fades out (taps, perfect hits). */
+@keyframes ring-out {
+  from { transform: scale(0.85); opacity: 0.7; }
+  to { transform: scale(1.6); opacity: 0; }
+}
+.ring-out {
   transform-box: fill-box;
   transform-origin: center;
-  animation: debris-fall-3d 550ms cubic-bezier(0.4, 0, 1, 1) forwards;
+  animation: ring-out 500ms ease-out forwards;
 }
 
-@keyframes landscape-drift {
-  0% {
-    transform: translateX(0);
-  }
-  50% {
-    transform: translateX(14px);
-  }
-  100% {
-    transform: translateX(0);
-  }
+/* A white flash that fades away. */
+@keyframes flash {
+  from { opacity: 0.85; }
+  to { opacity: 0; }
 }
-
-.landscape-drift {
-  animation: landscape-drift 18s ease-in-out infinite;
-}
+.flash { animation: flash 350ms ease-out forwards; }
 
 @keyframes shake {
-  0%,
-  100% {
-    transform: translateX(0);
-  }
-  25% {
-    transform: translateX(-6px);
-  }
-  75% {
-    transform: translateX(6px);
-  }
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
+}
+.shake { animation: shake 220ms ease-in-out; }
+
+/* A heavier, rotating shake for losing. */
+@keyframes stage-shake {
+  0%, 100% { transform: translate(0, 0) rotate(0); }
+  20% { transform: translate(-8px, 2px) rotate(-1deg); }
+  40% { transform: translate(7px, -3px) rotate(1deg); }
+  60% { transform: translate(-5px, 2px) rotate(-0.5deg); }
+  80% { transform: translate(3px, -1px) rotate(0.3deg); }
+}
+.stage-shake { animation: stage-shake 420ms ease-out; }
+
+/* Grid items appearing one after another; set --i on each item. */
+@keyframes stagger-in {
+  from { transform: scale(0.3); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+.stagger-in {
+  animation: stagger-in 260ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+  animation-delay: calc(var(--i, 0) * 12ms);
 }
 
-.shake {
-  animation: shake 220ms ease-in-out;
+/* Confetti pieces flying out from the center; see Confetti.tsx. */
+@keyframes confetti {
+  0% { transform: translate(0, 0) rotate(0); opacity: 1; }
+  100% {
+    transform: translate(var(--dx), var(--dy)) rotate(var(--rot));
+    opacity: 0;
+  }
 }
+.confetti-piece { animation: confetti 1100ms cubic-bezier(0.1, 0.7, 0.3, 1) forwards; }
+
+/* A gentle idle float, for title logos and intro art. */
+@keyframes bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+.bob { animation: bob 2.6s ease-in-out infinite; }
 
 @media (prefers-reduced-motion: reduce) {
-  .landscape-drift,
-  .overlay,
-  .shake {
-    animation: none;
-  }
-
-  .debris-fall-3d {
-    animation: debris-fall-3d 450ms linear forwards;
-  }
+  .pop, .bump, .shake, .stage-shake, .stagger-in, .bob, .overlay { animation: none; }
+  .float-up, .ring-out, .flash, .confetti-piece { animation-duration: 1ms; }
 }

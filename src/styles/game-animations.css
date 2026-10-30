@@ -1,0 +1,48 @@
+/* Keyframes used by one specific game. */
+
+/* Stack: a trimmed piece falling off the tower. */
+@keyframes debris-fall-3d {
+  0% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+  100% {
+    transform: translate(var(--fall-x, 20px), var(--fall-y, 70px)) rotate(var(--fall-rotate, 20deg));
+    opacity: 0;
+  }
+}
+.debris-fall-3d {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: debris-fall-3d 550ms cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+/* Stack: clouds drifting in the sky. */
+@keyframes landscape-drift {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(14px); }
+}
+.landscape-drift { animation: landscape-drift 18s ease-in-out infinite; }
+
+/* Stack: a block dropping into place from slightly above. */
+@keyframes land {
+  from { transform: translateY(-10px); }
+  to { transform: translateY(0); }
+}
+.land { animation: land 120ms ease-in; }
+
+/* Color Match: slowly cycling all colors around the wheel. */
+@keyframes hue-cycle {
+  from { filter: hue-rotate(0deg); }
+  to { filter: hue-rotate(360deg); }
+}
+.hue-cycle { animation: hue-cycle 12s linear infinite; }
+
+/* Click Sprint: the last seconds pulsing. */
+@keyframes urgent {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.12); }
+}
+.urgent { animation: urgent 500ms ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .landscape-drift, .land, .hue-cycle, .urgent { animation: none; }
+  .debris-fall-3d { animation: debris-fall-3d 450ms linear forwards; }
+}
