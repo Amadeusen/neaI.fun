@@ -1,26 +1,40 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
+import { useBestScore } from "@/lib/storage";
+import { cn } from "@/lib/utils";
+import { manifest } from "./manifest";
 
 const TOTAL_ROUNDS = 10;
 const SWATCH_COUNT = 6;
+/** Distractors stay at least this many degrees of hue away from the target. */
+const MIN_HUE_GAP = 18;
 
 type Phase = "idle" | "playing" | "done";
 
-function randomHsl(): string {
-  const hue = Math.floor(Math.random() * 360);
+interface Round {
+  target: string;
+  options: string[];
+}
+
+function randomHsl(avoidHue?: number): string {
+  let hue = Math.floor(Math.random() * 360);
+  if (avoidHue !== undefined) {
+    const gap = Math.abs(((hue - avoidHue + 540) % 360) - 180);
+    if (gap < MIN_HUE_GAP) hue = (hue + 2 * MIN_HUE_GAP) % 360;
+  }
   const saturation = 65 + Math.floor(Math.random() * 20);
   const lightness = 45 + Math.floor(Math.random() * 15);
   return `hsl(${hue} ${saturation}% ${lightness}%)`;
 }
 
-function buildRound(): { target: string; options: string[] } {
+function buildRound(): Round {
   const target = randomHsl();
+  const targetHue = Number(target.slice(4).split(" ")[0]);
   const options = [target];
   while (options.length < SWATCH_COUNT) {
-    options.push(randomHsl());
+    options.push(randomHsl(targetHue));
   }
-  // Shuffle in place.
   for (let i = options.length - 1; i > 0; i -= 1) {
     const j = Math.floor(Math.random() * (i + 1));
     [options[i], options[j]] = [options[j], options[i]];
@@ -32,97 +46,129 @@ export default function ColorMatch() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [round, setRound] = useState(0);
   const [score, setScore] = useState(0);
-  const [current, setCurrent] = useState(() => buildRound());
-  const [feedback, setFeedback] = useState<"correct" | "wrong" | null>(null);
+  const [current, setCurrent] = useState<Round | null>(null);
+  const [picked, setPicked] = useState<string | null>(null);
+  const [bestBeforeRun, setBestBeforeRun] = useState<number | null>(null);
+  const { best, submit } = useBestScore(manifest.slug);
 
   const start = () => {
     setPhase("playing");
     setRound(1);
     setScore(0);
     setCurrent(buildRound());
-    setFeedback(null);
+    setPicked(null);
+    setBestBeforeRun(best);
+  };
+
+  const finish = (finalScore: number) => {
+    setPhase("done");
+    submit(finalScore);
   };
 
   const pick = (color: string) => {
-    if (phase !== "playing" || feedback) return;
+    if (phase !== "playing" || !current || picked) return;
+    setPicked(color);
 
     if (color !== current.target) {
-      setFeedback("wrong");
-      window.setTimeout(() => setPhase("done"), 400);
+      window.setTimeout(() => finish(score), 900);
       return;
     }
 
-    setFeedback("correct");
+    const nextScore = score + 1;
     window.setTimeout(() => {
+      setScore(nextScore);
       if (round >= TOTAL_ROUNDS) {
-        setScore((s) => s + 1);
-        setPhase("done");
+        finish(nextScore);
         return;
       }
-      setScore((s) => s + 1);
-      setRound((r) => r + 1);
+      setRound(round + 1);
       setCurrent(buildRound());
-      setFeedback(null);
-    }, 250);
+      setPicked(null);
+    }, 280);
   };
 
-  const gridCols = useMemo(() => {
-    return SWATCH_COUNT % 3 === 0 ? "grid-cols-3" : "grid-cols-2";
-  }, []);
+  const wrong = picked !== null && current !== null && picked !== current.target;
+  const isNewBest = phase === "done" && score > (bestBeforeRun ?? 0);
 
   return (
-    <div className="flex flex-col items-center gap-6 text-center">
-      {phase === "idle" && (
-        <button
-          type="button"
-          onClick={start}
-          className="rounded-full bg-[var(--game-accent)] px-8 py-3 text-lg font-semibold text-white shadow-lg transition-transform active:scale-95"
-        >
-          Start
-        </button>
-      )}
+    <div className="flex h-full w-full max-w-md flex-col items-center justify-center gap-[3dvh] text-center">
+      <div className="flex flex-wrap justify-center gap-2">
+        <span className="pill">
+          Round <strong>{Math.max(1, Math.min(round, TOTAL_ROUNDS))}</strong>/{TOTAL_ROUNDS}
+        </span>
+        <span className="pill">
+          Score <strong>{score}</strong>
+        </span>
+        {best !== null && (
+          <span className="pill">
+            Best <strong>{best}</strong>
+          </span>
+        )}
+      </div>
 
-      {phase !== "idle" && (
-        <div className="font-mono text-sm text-neutral-500">
-          Round {Math.min(round, TOTAL_ROUNDS)}/{TOTAL_ROUNDS} · Score {score}
+      {phase === "idle" && (
+        <div className="flex flex-col items-center gap-5">
+          <span className="text-7xl" aria-hidden>
+            {manifest.emoji}
+          </span>
+          <p className="max-w-64 text-ink-muted">
+            Find the matching color, ten rounds in a row. One wrong pick ends the run.
+          </p>
+          <button type="button" onClick={start} className="btn">
+            Start
+          </button>
         </div>
       )}
 
-      {phase === "playing" && (
+      {phase === "playing" && current && (
         <>
-          <p className="text-sm text-neutral-500">Find this color:</p>
-          <div
-            className="h-20 w-40 rounded-xl border border-black/10 shadow-inner"
-            style={{ background: current.target }}
-          />
-          <div className={`grid ${gridCols} gap-3`}>
-            {current.options.map((color, i) => (
-              <button
-                key={`${color}-${i}`}
-                type="button"
-                onClick={() => pick(color)}
-                className="h-16 w-16 rounded-lg border border-black/10 transition-transform hover:scale-105 active:scale-95 sm:h-20 sm:w-20"
-                style={{ background: color }}
-                aria-label={`Swatch ${i + 1}`}
-              />
-            ))}
+          <div className="flex flex-col items-center gap-2">
+            <p className="text-sm text-ink-muted">Find this color</p>
+            <div
+              className={cn(
+                "h-[min(22dvh,9rem)] w-[min(70vw,16rem)] rounded-[var(--radius-card)] shadow-[inset_0_0_0_1px_rgb(0_0_0/0.08)]",
+                wrong && "shake",
+              )}
+              style={{ background: current.target }}
+            />
           </div>
-          {feedback === "wrong" && (
-            <p className="font-semibold text-red-500">Not quite!</p>
-          )}
+
+          <div className="grid grid-cols-3 gap-3">
+            {current.options.map((color, i) => {
+              const reveal = picked !== null && color === current.target;
+              return (
+                <button
+                  key={`${color}-${i}`}
+                  type="button"
+                  onClick={() => pick(color)}
+                  aria-label={`Swatch ${i + 1}`}
+                  className={cn(
+                    "size-[min(24vw,14dvh,6.5rem)] rounded-[var(--radius-tile)] shadow-[0_4px_0_rgb(0_0_0/0.15)] transition-transform active:translate-y-1 active:shadow-none",
+                    picked === null && "hover:-translate-y-0.5",
+                    reveal && "ring-4 ring-ink ring-offset-2 ring-offset-screen",
+                    picked === color && !reveal && "opacity-40",
+                  )}
+                  style={{ background: color }}
+                />
+              );
+            })}
+          </div>
+
+          <p className="h-6 font-semibold" aria-live="polite">
+            {wrong && "Not quite! That was the one."}
+          </p>
         </>
       )}
 
       {phase === "done" && (
-        <div className="flex flex-col items-center gap-3">
-          <p className="text-xl font-semibold">
+        <div className="flex flex-col items-center gap-4">
+          <p className="font-display text-3xl font-bold">
+            {score === TOTAL_ROUNDS ? "Perfect eye!" : isNewBest ? "New best!" : "Run over"}
+          </p>
+          <p className="text-ink-muted">
             You matched {score} of {TOTAL_ROUNDS}
           </p>
-          <button
-            type="button"
-            onClick={start}
-            className="rounded-full border border-current px-5 py-2 text-sm font-medium transition-opacity hover:opacity-70"
-          >
+          <button type="button" onClick={start} className="btn">
             Play again
           </button>
         </div>
