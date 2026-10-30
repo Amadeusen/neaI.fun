@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { PixelHeart } from "./PixelHeart";
-import { BONUS_MS, LIVES, URGENT_MS } from "./useColorMatch";
+import { BONUS_MS, LIVES, REGEN_STREAK, URGENT_MS } from "./useColorMatch";
 
 /** Seconds with one decimal under ten, whole seconds above. */
 function formatTime(ms: number): string {
@@ -9,16 +9,20 @@ function formatTime(ms: number): string {
 }
 
 /**
- * The run's status bar: three pixel hearts, the clock (with a "+5s" popup
- * on every right answer, pulsing red when time runs low) and the level.
+ * The run's status bar: three pixel hearts (with progress toward winning a
+ * lost one back), the clock (with a "+5s" popup on every right answer,
+ * pulsing red when time runs low) and the level.
  */
 export function Hud({
   lives,
+  streak,
   msLeft,
   bonusId,
   level,
 }: {
   lives: number;
+  /** Clean levels in a row, toward REGEN_STREAK. */
+  streak: number;
   msLeft: number;
   /** Changes on every bonus, to replay the "+5s" popup. */
   bonusId: number;
@@ -33,9 +37,17 @@ export function Hud({
           <PixelHeart
             key={`${i}-${i < lives}`}
             full={i < lives}
-            className={cn("size-7", i >= lives && "shake")}
+            className={cn("size-7", i < lives ? "pop" : "shake")}
           />
         ))}
+        {lives < LIVES && (
+          <span
+            className="ml-1 self-center text-xs font-semibold text-ink-muted tabular-nums"
+            title={`${REGEN_STREAK} clean levels in a row win a heart back`}
+          >
+            {streak}/{REGEN_STREAK}
+          </span>
+        )}
       </div>
 
       <span className="relative">

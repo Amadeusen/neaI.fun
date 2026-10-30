@@ -21,13 +21,20 @@ export default function ColorMatch() {
   let message = "";
   if (game.phase === "reveal") message = game.lives === 0 ? "Out of hearts!" : "Time's up!";
   else if (game.wrongPicks.length > 0 && game.solved === null) message = "Not that one, try again!";
+  else if (game.solved === null && game.healedLevel === level) message = "Heart restored! ❤️";
   else if (game.solved === null && level === VARIATIONS_FROM) message = "Now the shades get closer…";
   else if (game.solved === null && isNewGridLevel(level)) message = "Bigger grid!";
 
   return (
     <div className="flex h-full w-full max-w-xl flex-col items-center justify-center gap-[2.5dvh] text-center">
       {inRun && (
-        <Hud lives={game.lives} msLeft={game.msLeft} bonusId={game.bonusId} level={level} />
+        <Hud
+          lives={game.lives}
+          streak={game.streak}
+          msLeft={game.msLeft}
+          bonusId={game.bonusId}
+          level={level}
+        />
       )}
       {!inRun && game.best !== null && (
         <span className="pill">
