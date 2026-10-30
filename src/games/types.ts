@@ -29,4 +29,6 @@ export interface GameListing {
   manifest: GameManifest;
   /** Static illustration drawn on the game's home page tile. */
   Thumbnail: ComponentType;
+  /** The game's stylized title logo, also used in its top bar. */
+  Title: ComponentType;
 }
