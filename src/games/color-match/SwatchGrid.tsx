@@ -11,12 +11,18 @@ import type { Round } from "./rounds";
  */
 export function SwatchGrid({
   round,
-  picked,
+  wrongPicks,
+  solved,
+  reveal,
   onPick,
 }: {
   round: Round;
-  /** Index of the picked swatch, or null while the player is choosing. */
-  picked: number | null;
+  /** Swatches already tried and missed: greyed out and disabled. */
+  wrongPicks: number[];
+  /** Index of the right pick once found, or null while choosing. */
+  solved: number | null;
+  /** Outline the right answer (the run just ended). */
+  reveal: boolean;
   onPick: (index: number) => void;
 }) {
   const dense = round.cols > 4;
@@ -29,23 +35,25 @@ export function SwatchGrid({
     <div className={cn("grid", dense ? "gap-1.5" : "gap-3")} style={style}>
       {round.options.map((color, i) => {
         const isTarget = color === round.target;
-        const reveal = picked !== null && isTarget;
-        const rightPick = picked === i && isTarget;
+        const rightPick = solved === i;
+        const missed = wrongPicks.includes(i);
+        const locked = solved !== null || reveal;
         return (
           <button
             key={i}
             type="button"
             onClick={() => onPick(i)}
+            disabled={missed}
             aria-label={`Swatch ${i + 1}`}
             className={cn(
               "stagger-in relative grid aspect-square w-full place-items-center transition-transform active:scale-90",
               dense
                 ? "rounded-md shadow-[0_2px_0_rgb(0_0_0/0.15)]"
                 : "rounded-[var(--radius-tile)] shadow-[0_4px_0_rgb(0_0_0/0.15)]",
-              picked === null && "hover:scale-105",
-              reveal && "z-10 ring-4 ring-ink ring-offset-2 ring-offset-screen",
+              !locked && !missed && "hover:scale-105",
+              reveal && isTarget && "z-10 ring-4 ring-ink ring-offset-2 ring-offset-screen",
               rightPick && "pop",
-              picked === i && !isTarget && "opacity-40",
+              missed && "scale-75 opacity-25 grayscale",
             )}
             style={{ background: color, "--i": (i * 4) / round.cols } as CSSProperties}
           >
