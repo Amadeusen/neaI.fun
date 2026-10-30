@@ -36,6 +36,7 @@ Open [http://localhost:3000](http://localhost:3000).
   state, conventions
 - [Styling](docs/styling.md): tokens, shared classes, per-game themes,
   fitting the screen, home tiles
+- [Sound, vibration and animation](docs/juice.md): the shared feedback toolkit
 - [Adding a game](docs/adding-a-game.md): step-by-step guide and checklist
 - [Deployment](docs/deployment.md): GitHub Pages pipeline and config
 
@@ -45,8 +46,8 @@ Open [http://localhost:3000](http://localhost:3000).
 src/
   app/            Routes: home + one folder per game (app/stack/page.tsx -> /stack)
   games/          One folder per game (manifest, Game, Thumbnail, README, ...)
-  components/     Logo, GameTile, GameScreen
+  components/     Logo, GameTile, GameScreen, Confetti
   styles/         Shared CSS: tokens, base, components, animations
-  lib/            useBestScore (localStorage), useAspectRatio, cn
+  lib/            storage, sound/sfx, haptics, small hooks, cn
 docs/             Project documentation
 ```

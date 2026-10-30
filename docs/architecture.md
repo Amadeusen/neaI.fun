@@ -26,11 +26,16 @@ src/
     shared/Logo.tsx             "neaI.fun" wordmark (home title + game top bar)
     home/GameTile.tsx           Wide tile on the home page
     game/GameScreen.tsx         Full-viewport frame around every game
+    game/Confetti.tsx           One-shot confetti burst for new bests
 
   styles/                       Plain CSS shared by every screen (see styling.md)
   lib/                          Framework-agnostic helpers
     storage.ts                  useBestScore(): best scores in localStorage
+    sound.ts                    Web Audio synthesizer (tone, noise, scaleNote)
+    sfx.ts                      The site's sound palette (start, pop, fail, ...)
+    haptics.ts                  Light / medium / heavy phone vibrations
     useAspectRatio.ts           Measures an element's width / height
+    useKeyPress.ts              Page-wide key handler (space to play)
     utils.ts                    cn() class-name joiner
 ```
 
@@ -44,10 +49,11 @@ ships no game JavaScript at all.
 **A game (`/stack`)** has its own route file, `src/app/stack/page.tsx`. It:
 
 1. exports `metadata` built from the manifest (`gameMetadata`), and
-2. renders `<GameScreen manifest={manifest}><Stack /></GameScreen>`.
+2. renders `<GameScreen manifest={manifest} title={<StackTitle />}><Stack /></GameScreen>`.
 
-`GameScreen` is a server component: the top bar (logo link home, centered
-title) and a stage filling the rest of the viewport. The game component
+`GameScreen` is a server component: the top bar (site logo linking home,
+and the game's stylized title logo) and a stage filling the rest of the
+viewport. The game component
 inside is a client component (`"use client"`), the only part that hydrates.
 
 Because each route imports only its own game, Next.js puts every game in
@@ -62,6 +68,7 @@ Every game folder has the same entry points, and may add more files:
 | `manifest.ts`   | Slug, title, description, emoji, theme colors                     |
 | `Game.tsx`      | Default-exported client component mounted by the route            |
 | `Thumbnail.tsx` | Static SVG art for the home tile (server component, no state)     |
+| `Title.tsx`     | Stylized title logo shown in the game's top bar                   |
 | `README.md`     | Rules of the game and a map of its files                          |
 
 Larger games split further. Stack, for example, separates:

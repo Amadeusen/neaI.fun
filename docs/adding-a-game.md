@@ -58,6 +58,8 @@ Rules of thumb:
   [styling.md](styling.md#fitting-the-screen).
 - Use the shared `.btn`, `.pill` and `.overlay` classes so the game looks
   like the rest of the site.
+- Give every action feedback: a sound from `sfx`, a vibration from
+  `haptics` and a shared animation class; see [juice.md](juice.md).
 - Keep files under 150 lines. As the game grows, split it into rules (pure
   `.ts`), state (`useMyGame.ts`), rendering components, and a thin
   `Game.tsx` that assembles them; Stack is the reference.
@@ -72,7 +74,15 @@ in a square on the right side of the tile, behind the title, so crop the
 `viewBox` tightly around the drawing. Use `var(--tile-accent)` for the
 accent color and `group-hover:` utilities for an optional hover effect.
 
-## 4. Route
+## 4. Title logo
+
+`src/games/my-game/Title.tsx`: a small server component drawing the game's
+name as a stylized logo that hints at the game (Stack puts each letter on a
+block, Color Match colors each letter). It sits centered in the top bar, so
+keep it around 40px tall and under ~220px wide on phones. Mark it
+`aria-hidden`; `GameScreen` labels the heading with the plain title.
+
+## 5. Route
 
 `src/app/my-game/page.tsx`:
 
@@ -81,19 +91,20 @@ import { GameScreen } from "@/components/game/GameScreen";
 import { gameMetadata } from "@/games/metadata";
 import MyGame from "@/games/my-game/Game";
 import { manifest } from "@/games/my-game/manifest";
+import { MyGameTitle } from "@/games/my-game/Title";
 
 export const metadata = gameMetadata(manifest);
 
 export default function MyGamePage() {
   return (
-    <GameScreen manifest={manifest}>
+    <GameScreen manifest={manifest} title={<MyGameTitle />}>
       <MyGame />
     </GameScreen>
   );
 }
 ```
 
-## 5. Registry
+## 6. Registry
 
 In `src/games/registry.ts`, import the manifest and thumbnail and add an
 entry where the tile should appear:
@@ -102,7 +113,7 @@ entry where the tile should appear:
 { manifest: myGame, Thumbnail: MyGameThumbnail },
 ```
 
-## 6. Readme
+## 7. Readme
 
 Add `src/games/my-game/README.md` with the rules of the game and a short
 map of its files (copy the structure of an existing one).

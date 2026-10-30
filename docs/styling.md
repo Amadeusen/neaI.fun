@@ -14,7 +14,8 @@ All shared CSS lives in `src/styles/` and is imported once, in order, by
 | `tokens.css`     | CSS variables: colors, radii, shadow, per-screen variables       |
 | `base.css`       | Element defaults: body colors and font, focus ring               |
 | `components.css` | Shared classes: `.btn`, `.btn-light`, `.pill`, `.overlay`, `.overlay-dim` |
-| `animations.css` | Keyframes and their classes: `pop-in`, `shake`, debris, clouds   |
+| `animations.css` | Shared juice classes: `.pop`, `.bump`, `.float-up`, `.shake`, ... |
+| `game-animations.css` | Keyframes used by one game only (debris, clouds, hue cycle) |
 
 `globals.css` then maps the tokens into Tailwind with `@theme inline`, which
 is what makes utilities like `text-ink-muted`, `bg-accent`, `bg-screen` and
@@ -66,9 +67,9 @@ pattern to `components.css` once a second game needs it.
   `<span className="pill">Best <strong>12</strong></span>`.
 - `.overlay`: absolutely positioned, centered layer over a game stage.
   Add `.overlay-dim` for the dark, blurred "game over" variant.
-- `.shake`: one short horizontal shake (wrong answer feedback).
-
-All animations are disabled or simplified under `prefers-reduced-motion`.
+Animation classes, sounds and vibration are documented in
+[juice.md](juice.md). All animations are disabled or simplified under
+`prefers-reduced-motion`.
 
 ## Fitting the screen
 
