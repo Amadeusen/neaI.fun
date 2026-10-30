@@ -1,3 +1,5 @@
+import { CURSOR_PATH } from "@/components/shared/cursor";
+
 const ACCENT = "var(--tile-accent)";
 
 /** Home page tile art for Click Sprint (static SVG, no client JS). */
@@ -35,7 +37,7 @@ export function ClickSprintThumbnail() {
 
       {/* Mouse cursor about to click. */}
       <path
-        d="M0 0 L0 26 L7 20 L12 31 L17 29 L12 18 L21 18 Z"
+        d={CURSOR_PATH}
         transform="translate(124 140) rotate(-12)"
         fill="#fff"
         stroke="#111"

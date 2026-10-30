@@ -1,3 +1,5 @@
+import { CURSOR_PATH } from "@/components/shared/cursor";
+
 /** "Click Sprint" leaning forward, with speed lines and a cursor. */
 export function ClickSprintTitle() {
   return (
@@ -11,9 +13,9 @@ export function ClickSprintTitle() {
         <span className="text-accent">Click</span>
         <span className="text-ink"> Sprint</span>
       </span>
-      <svg viewBox="0 0 22 32" className="bob h-6 w-5 sm:h-7" aria-hidden>
+      <svg viewBox="-1 -1 24 34" className="bob h-6 w-5 sm:h-7" aria-hidden>
         <path
-          d="M1 1 L1 26 L8 20 L13 31 L18 29 L13 18 L21 18 Z"
+          d={CURSOR_PATH}
           fill="#fff"
           stroke="#111"
           strokeWidth="2"

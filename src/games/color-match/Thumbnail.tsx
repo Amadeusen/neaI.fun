@@ -1,3 +1,5 @@
+import { CURSOR_PATH } from "@/components/shared/cursor";
+
 const TARGET = "#f2a541";
 const SWATCHES = ["#4cc9a6", "#e5596b", TARGET, "#6c8cff", "#b07cff", "#9ad14b"];
 const SIZE = 34;
@@ -49,7 +51,7 @@ export function ColorMatchThumbnail() {
 
       {/* Cursor pointing at the match. */}
       <path
-        d="M0 0 L0 26 L7 20 L12 31 L17 29 L12 18 L21 18 Z"
+        d={CURSOR_PATH}
         transform="translate(134 140) rotate(-12)"
         fill="#fff"
         stroke="#111"
