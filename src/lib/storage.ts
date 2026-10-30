@@ -1,5 +1,3 @@
-"use client";
-
 import { useCallback, useSyncExternalStore } from "react";
 
 /**
@@ -39,9 +37,10 @@ function subscribe(onChange: () => void): () => void {
 }
 
 /**
- * The best (highest) score saved for a game in this browser, plus a function
- * to submit a new score; it is only stored if it beats the current best.
- * `best` is null on the server and until a first score is saved.
+ * The best (highest) score saved for a game in this browser, plus `submit`
+ * to record a finished run. `submit` stores the score only if it beats the
+ * current best and returns whether it did, so a game can say "New best!".
+ * `best` is null on the server and until a first positive score is saved.
  */
 export function useBestScore(slug: string) {
   const key = `best:${slug}`;
@@ -54,9 +53,11 @@ export function useBestScore(slug: string) {
   const best = raw === null ? null : Number(raw);
 
   const submit = useCallback(
-    (score: number) => {
-      const current = Number(read(key) ?? -Infinity);
-      if (score > current) write(key, String(score));
+    (score: number): boolean => {
+      const previous = read(key);
+      const isNewBest = score > (previous === null ? 0 : Number(previous));
+      if (isNewBest) write(key, String(score));
+      return isNewBest;
     },
     [key],
   );
