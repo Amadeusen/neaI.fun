@@ -1,11 +1,13 @@
 /**
  * Rules and color generation for Color Match.
  *
- * The run is endless; level N is won by picking the swatch that matches the
- * target. Levels before HARD_FROM use a small grid of clearly different
- * hues. From HARD_FROM on, the grid grows by one row and column every
- * LEVELS_PER_SIZE levels, and every swatch is a slight variation of the
- * target that gets subtler each level, like a color-vision test.
+ * The run is endless; level N is won by picking the swatch that exactly
+ * matches the target. Difficulty rises smoothly on two axes:
+ *
+ * - the grid grows step by step (GRID_STEPS), and
+ * - from VARIATIONS_FROM on, every swatch is a variation of the target whose
+ *   distance (`delta`) shrinks exponentially with the level, so early
+ *   levels are relaxed and the late game becomes a color-vision test.
  */
 
 export type Phase = "idle" | "playing" | "done";
@@ -17,29 +19,39 @@ export interface Round {
   options: string[];
 }
 
-export const HARD_FROM = 10;
-const LEVELS_PER_SIZE = 5;
-const FIRST_HARD_SIZE = 4;
-const MAX_SIZE = 8;
+/** Grid size by level: each step applies from its `from` level onward. */
+const GRID_STEPS = [
+  { from: 1, cols: 3, rows: 2 },
+  { from: 6, cols: 3, rows: 3 },
+  { from: 13, cols: 4, rows: 4 },
+  { from: 27, cols: 5, rows: 5 },
+  { from: 37, cols: 6, rows: 6 },
+  { from: 47, cols: 7, rows: 7 },
+  { from: 57, cols: 8, rows: 8 },
+];
 
+/** Before this level, swatches are simply different hues. */
+export const VARIATIONS_FROM = 6;
 /** Easy levels: every swatch at least this many degrees of hue from every other. */
 const MIN_HUE_GAP = 18;
-/** Hard levels: how far distractors sit from the target, shrinking per level. */
-const START_DELTA = 12;
-const DELTA_STEP = 0.4;
-const MIN_DELTA = 3;
+/** Variation distance: starts wide, decays toward MIN_DELTA (≈11.6 at level 25). */
+const START_DELTA = 60;
+const MIN_DELTA = 2.5;
+const DECAY_LEVELS = 13;
 
-/** Grid dimensions for a level. */
 export function gridFor(level: number): { cols: number; rows: number } {
-  if (level < HARD_FROM) return { cols: 3, rows: 2 };
-  const size = FIRST_HARD_SIZE + Math.floor((level - HARD_FROM) / LEVELS_PER_SIZE);
-  const capped = Math.min(MAX_SIZE, size);
-  return { cols: capped, rows: capped };
+  const step = [...GRID_STEPS].reverse().find((s) => level >= s.from)!;
+  return { cols: step.cols, rows: step.rows };
 }
 
-/** True on the first level of each grid size, to announce the change. */
+/** True on the first level of each bigger grid, to announce it. */
 export function isNewGridLevel(level: number): boolean {
-  return level >= HARD_FROM && (level - HARD_FROM) % LEVELS_PER_SIZE === 0;
+  return level > 1 && GRID_STEPS.some((s) => s.from === level);
+}
+
+/** How far distractors sit from the target at a level (HSL units). */
+export function deltaFor(level: number): number {
+  return MIN_DELTA + (START_DELTA - MIN_DELTA) * Math.exp(-(level - 1) / DECAY_LEVELS);
 }
 
 const random = (min: number, max: number) => min + Math.random() * (max - min);
@@ -47,21 +59,12 @@ const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(mi
 const hsl = (h: number, s: number, l: number) =>
   `hsl(${h.toFixed(1)} ${s.toFixed(1)}% ${l.toFixed(1)}%)`;
 
-/** Shortest distance between two hues on the color wheel, in degrees. */
 function hueDistance(a: number, b: number): number {
   return Math.abs(((a - b + 540) % 360) - 180);
 }
 
-function shuffle<T>(items: T[]): T[] {
-  for (let i = items.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [items[i], items[j]] = [items[j], items[i]];
-  }
-  return items;
-}
-
-/** Levels 1-9: vivid colors with clearly different hues. */
-function easyOptions(count: number): string[] {
+/** Early levels: vivid colors with clearly different hues. */
+function distinctOptions(count: number): string[] {
   const hues: number[] = [];
   while (hues.length < count) {
     const hue = Math.floor(Math.random() * 360);
@@ -71,12 +74,13 @@ function easyOptions(count: number): string[] {
 }
 
 /**
- * Hard levels: the target plus distractors offset from it by exactly
- * `delta` in a random direction of (hue, saturation, lightness), so none can
- * be mistaken for an exact match but all look alike at a glance.
+ * Later levels: the target plus distractors offset from it by `delta` in a
+ * random direction of (hue, saturation, lightness). Hue moves twice as far
+ * as the others, and saturation / lightness offsets are capped so wide early
+ * deltas don't wash colors out to white or black.
  */
-function hardOptions(count: number, level: number): { target: string; options: string[] } {
-  const delta = Math.max(MIN_DELTA, START_DELTA - (level - HARD_FROM) * DELTA_STEP);
+function variationOptions(count: number, level: number) {
+  const delta = deltaFor(level);
   const [h, s, l] = [random(0, 360), random(55, 75), random(45, 60)];
   const target = hsl(h, s, l);
 
@@ -86,23 +90,27 @@ function hardOptions(count: number, level: number): { target: string; options: s
     const norm = Math.hypot(x, y, z) || 1;
     options.push(
       hsl(
-        h + (x / norm) * delta * 1.5,
-        clamp(s + (y / norm) * delta, 0, 100),
-        clamp(l + (z / norm) * delta, 0, 100),
+        h + (x / norm) * delta * 2,
+        clamp(s + (y / norm) * Math.min(delta, 25), 0, 100),
+        clamp(l + (z / norm) * Math.min(delta, 18), 0, 100),
       ),
     );
   }
-  return { target, options: shuffle(options) };
+  for (let i = options.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [options[i], options[j]] = [options[j], options[i]];
+  }
+  return { target, options };
 }
 
-/** Builds the grid for a level: one swatch exactly matches `target`. */
+/** Builds the grid for a level: exactly one swatch matches `target`. */
 export function buildRound(level: number): Round {
   const { cols, rows } = gridFor(level);
   const count = cols * rows;
 
-  if (level < HARD_FROM) {
-    const options = easyOptions(count);
+  if (level < VARIATIONS_FROM) {
+    const options = distinctOptions(count);
     return { cols, rows, target: options[Math.floor(Math.random() * count)], options };
   }
-  return { cols, rows, ...hardOptions(count, level) };
+  return { cols, rows, ...variationOptions(count, level) };
 }
