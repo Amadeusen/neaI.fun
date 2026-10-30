@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, type PointerEvent } from "react";
+import { useTimeouts } from "@/lib/useTimeouts";
 import { cn } from "@/lib/utils";
 import { CountdownRing } from "./CountdownRing";
 import { ROUND_MS, type Phase } from "./useClickSprint";
@@ -39,6 +40,7 @@ export function SprintButton({
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [floaters, setFloaters] = useState<Floater[]>([]);
   const nextId = useRef(0);
+  const later = useTimeouts();
 
   const press = (x: number, y: number) => {
     if (!onTap()) return;
@@ -48,7 +50,7 @@ export function SprintButton({
     );
     const id = nextId.current++;
     setFloaters((f) => [...f.slice(-MAX_FLOATERS + 1), { id, x, y }]);
-    window.setTimeout(() => setFloaters((f) => f.filter((p) => p.id !== id)), FLOATER_MS);
+    later(() => setFloaters((f) => f.filter((p) => p.id !== id)), FLOATER_MS);
   };
 
   const onPointerDown = (e: PointerEvent) => {
