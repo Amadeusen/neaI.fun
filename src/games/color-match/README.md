@@ -7,11 +7,14 @@ matches it exactly. The run is endless and played against the clock:
   moves you to the next level. Under 5 seconds the clock pulses red.
 - **Hearts**: three pixel-art hearts. A wrong pick costs a heart and greys
   that swatch out, and you try the same grid again.
+- **Healing**: clear 5 levels in a row without a single miss and a lost
+  heart comes back ("Heart restored!"). Progress shows next to the hearts
+  (`3/5`); a level with a miss resets it, even once you find the answer.
 - **Game over** when the hearts or the clock run out: the right answer is
   outlined for a moment, then the results. The score is the number of
   levels cleared, and the best is saved in the browser.
 
-Tune these with `START_MS`, `BONUS_MS`, `LIVES` and `URGENT_MS` at the top of
+Tune these with `START_MS`, `BONUS_MS`, `LIVES`, `REGEN_STREAK` and `URGENT_MS` at the top of
 `useColorMatch.ts`.
 
 ## Difficulty
@@ -42,7 +45,7 @@ approaches 2.5. Tune it with the constants at the top of `rounds.ts`.
 | `manifest.ts`    | Title, description, theme                                         |
 | `Game.tsx`       | Layout of the screens: intro, run (HUD, target, grid), results    |
 | `useColorMatch.ts` | Run state: clock, bonus time, hearts, retries, sounds, best score |
-| `Hud.tsx`        | Hearts, clock with "+5s" popup, level                             |
+| `Hud.tsx`        | Hearts with healing progress, clock with "+5s" popup, level       |
 | `PixelHeart.tsx` | A 7 × 6 pixel-art heart, full or lost                             |
 | `Intro.tsx`      | Start screen: shifting mosaic with an odd tile, title, Start      |
 | `Title.tsx`      | "Color Match" logo, each letter of "Color" in its own hue          |
