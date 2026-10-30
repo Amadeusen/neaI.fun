@@ -56,12 +56,16 @@ export default function ColorMatch() {
   return (
     <div className="flex h-full w-full max-w-md flex-col items-center justify-center gap-[3dvh] text-center">
       <div className="flex flex-wrap justify-center gap-2">
-        <span className="pill">
-          Round <strong>{Math.max(1, Math.min(round, TOTAL_ROUNDS))}</strong>/{TOTAL_ROUNDS}
-        </span>
-        <span className="pill">
-          Score <strong>{score}</strong>
-        </span>
+        {phase !== "idle" && (
+          <>
+            <span className="pill">
+              Round <strong>{Math.max(1, Math.min(round, TOTAL_ROUNDS))}</strong>/{TOTAL_ROUNDS}
+            </span>
+            <span className="pill">
+              Score <strong>{score}</strong>
+            </span>
+          </>
+        )}
         {best !== null && (
           <span className="pill">
             Best <strong>{best}</strong>
