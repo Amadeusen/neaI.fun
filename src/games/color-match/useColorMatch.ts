@@ -10,6 +10,8 @@ import { buildRound, isNewGridLevel, type Phase, type Round } from "./rounds";
 export const START_MS = 30_000;
 export const BONUS_MS = 5_000;
 export const LIVES = 3;
+/** Levels cleared in a row without a mistake to win back a lost heart. */
+export const REGEN_STREAK = 5;
 /** Under this much time left, the clock turns urgent. */
 export const URGENT_MS = 5_000;
 /** How long the answer stays revealed before the results screen. */
@@ -21,8 +23,9 @@ const NEXT_LEVEL_DELAY_MS = 300;
  * Color Match's state: endless levels against a clock. The run starts with
  * START_MS on the clock; every right pick adds BONUS_MS and moves to the next
  * level. A wrong pick costs one of LIVES hearts and greys that swatch out,
- * and the player tries the same grid again. The run ends when the hearts or
- * the clock run out; the score is the number of levels cleared.
+ * and the player tries the same grid again. After REGEN_STREAK levels in a
+ * row without a mistake, a lost heart comes back. The run ends when the
+ * hearts or the clock run out; the score is the number of levels cleared.
  */
 export function useColorMatch() {
   const [phase, setPhase] = useState<Phase>("idle");
@@ -32,6 +35,8 @@ export function useColorMatch() {
   const [wrongPicks, setWrongPicks] = useState<number[]>([]);
   const [solved, setSolved] = useState<number | null>(null);
   const [lives, setLives] = useState(LIVES);
+  const [streak, setStreak] = useState(0);
+  const [healedLevel, setHealedLevel] = useState<number | null>(null);
   const [bonusId, setBonusId] = useState(0);
   const [isNewBest, setIsNewBest] = useState(false);
   const { best, submit } = useBestScore(manifest.slug);
@@ -71,6 +76,8 @@ export function useColorMatch() {
     setCleared(0);
     goTo(1);
     setLives(LIVES);
+    setStreak(0);
+    setHealedLevel(null);
     setBonusId(0);
     setIsNewBest(false);
     setPhase("playing");
@@ -87,7 +94,17 @@ export function useColorMatch() {
       setSolved(index);
       clock.add(BONUS_MS);
       setBonusId((id) => id + 1);
-      sfx.success(level);
+      // A level only counts toward the streak if it was cleared without a miss.
+      const nextStreak = wrongPicks.length > 0 ? 0 : streak + 1;
+      if (lives < LIVES && nextStreak >= REGEN_STREAK) {
+        setLives(lives + 1);
+        setStreak(0);
+        setHealedLevel(level + 1);
+        sfx.grow();
+      } else {
+        setStreak(nextStreak);
+        sfx.success(level);
+      }
       haptics.light();
       // The clock may run out during the pause: then the run is over.
       later(() => !overRef.current && goTo(level + 1), NEXT_LEVEL_DELAY_MS);
@@ -95,6 +112,7 @@ export function useColorMatch() {
     }
 
     setWrongPicks((w) => [...w, index]);
+    setStreak(0);
     const remaining = lives - 1;
     setLives(remaining);
     if (remaining === 0) {
@@ -113,6 +131,8 @@ export function useColorMatch() {
     wrongPicks,
     solved,
     lives,
+    streak,
+    healedLevel,
     msLeft: phase === "idle" ? START_MS : clock.msLeft,
     bonusId,
     best,
