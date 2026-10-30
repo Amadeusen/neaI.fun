@@ -19,3 +19,8 @@ export const DEFAULT_ASPECT = 300 / 420;
 export const CENTER = GAME_SIZE / 2;
 
 export const HUE_STEP = 5;
+
+/** A drop this close (in world units) to the block below counts as perfect and snaps. */
+export const PERFECT_TOLERANCE = 3;
+/** Every this-many perfect drops in a row, the tower grows back one trimmed size. */
+export const REGROW_EVERY = 3;
