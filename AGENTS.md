@@ -19,8 +19,8 @@ changing structure, and `docs/adding-a-game.md` before adding a game.
 - **One route file per game**: `src/app/<slug>/page.tsx` renders
   `<GameScreen>` around the game. There is no generic `[slug]` route.
 - **One folder per game**: `src/games/<slug>/` holds `manifest.ts`,
-  `Game.tsx` (client component), `Thumbnail.tsx` (static SVG tile art) and
-  `README.md`, plus any game-specific modules.
+  `Game.tsx` (client component), `Thumbnail.tsx` (static SVG tile art),
+  `Title.tsx` (top-bar logo) and `README.md`, plus any game-specific modules.
 - **Registry**: `src/games/registry.ts` lists `{ manifest, Thumbnail }` in
   home page order. The slug must match the route folder name.
 - **Shared UI** goes in `src/components/` (`shared/`, `home/`, `game/`);
@@ -44,6 +44,9 @@ changing structure, and `docs/adding-a-game.md` before adding a game.
   events are needed.
 - Every game must fit the viewport with no scrolling, on a 375 × 812 phone
   and on desktop.
+- Every player action gets feedback: a sound from `src/lib/sfx.ts`, a
+  vibration from `src/lib/haptics.ts` and a shared animation class
+  (see `docs/juice.md`). Each game also has a `Title.tsx` logo.
 - Code, comments, UI text and docs are in English.
 - Update the relevant `docs/` page and the game's `README.md` in the same
   change as the code.
