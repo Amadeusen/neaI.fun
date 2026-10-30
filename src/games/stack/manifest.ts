@@ -6,7 +6,10 @@ export const manifest: GameManifest = {
   tagline: "Time your drops to build the tallest tower.",
   description:
     "A block glides back and forth above your tower. Tap to drop it — line it up perfectly or it gets trimmed to the overlap. Miss completely and the run ends.",
-  accentColor: "#22c55e",
   emoji: "🧱",
-  tags: ["arcade", "timing"],
+  theme: {
+    accent: "#ff7a59",
+    background: "#e6f6ff",
+    tile: "#cdeeff",
+  },
 };
