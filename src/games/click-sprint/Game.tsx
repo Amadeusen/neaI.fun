@@ -106,7 +106,7 @@ export default function ClickSprint() {
           <>
             <p className="font-display text-2xl font-bold">
               {isNewBest ? "New best! " : ""}
-              {clicks} clicks · {cps}/s
+              {clicks} {clicks === 1 ? "click" : "clicks"} · {cps}/s
             </p>
             <button type="button" onClick={start} className="btn">
               Play again
