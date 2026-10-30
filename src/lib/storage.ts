@@ -36,6 +36,12 @@ function subscribe(onChange: () => void): () => void {
   };
 }
 
+/** A stored score, or null if missing or not a valid number (e.g. edited by hand). */
+function parseScore(raw: string | null): number | null {
+  const value = raw === null ? NaN : Number(raw);
+  return Number.isFinite(value) ? value : null;
+}
+
 /**
  * The best (highest) score saved for a game in this browser, plus `submit`
  * to record a finished run. `submit` stores the score only if it beats the
@@ -50,12 +56,11 @@ export function useBestScore(slug: string) {
     () => read(key),
     () => null,
   );
-  const best = raw === null ? null : Number(raw);
+  const best = parseScore(raw);
 
   const submit = useCallback(
     (score: number): boolean => {
-      const previous = read(key);
-      const isNewBest = score > (previous === null ? 0 : Number(previous));
+      const isNewBest = score > (parseScore(read(key)) ?? 0);
       if (isNewBest) write(key, String(score));
       return isNewBest;
     },
