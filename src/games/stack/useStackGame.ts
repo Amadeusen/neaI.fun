@@ -7,6 +7,11 @@ import { baseBlock, nextSlidingBlock } from "./rules";
 import { useDebris } from "./useDebris";
 import type { Axis, Block, Phase } from "./types";
 
+/** Space presses right after losing are ignored, so mashing doesn't skip the result. */
+const RESTART_LOCK_MS = 700;
+/** Longest frame step simulated, so returning to a hidden tab doesn't teleport the block. */
+const MAX_FRAME_S = 0.05;
+
 /**
  * All of Stack's game state and rules: the animation loop that slides the
  * current block, dropping it, scoring and restarting. Rendering lives in
@@ -31,6 +36,7 @@ export function useStackGame() {
   const sizeRef = useRef(BASE_SIZE);
   const rafRef = useRef<number | null>(null);
   const lastTsRef = useRef<number | null>(null);
+  const overAtRef = useRef(0);
 
   const stopLoop = () => {
     if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
@@ -59,7 +65,7 @@ export function useStackGame() {
   /** One animation frame: move the sliding block, bouncing at the edges. */
   const tick = (ts: number) => {
     if (lastTsRef.current == null) lastTsRef.current = ts;
-    const dt = (ts - lastTsRef.current) / 1000;
+    const dt = Math.min(MAX_FRAME_S, (ts - lastTsRef.current) / 1000);
     lastTsRef.current = ts;
 
     let pos = posRef.current + dirRef.current * speedRef.current * dt;
@@ -100,6 +106,7 @@ export function useStackGame() {
       stopLoop();
       setCurrent(null);
       setPhase("over");
+      overAtRef.current = performance.now();
       setIsNewBest(submit(placed.length - 1));
       return;
     }
@@ -120,8 +127,8 @@ export function useStackGame() {
   const onKeyDown = useEffectEvent((e: KeyboardEvent) => {
     if (e.key !== " " || e.repeat) return;
     e.preventDefault();
-    if (phase === "over") start();
-    else activate();
+    if (phase !== "over") activate();
+    else if (performance.now() - overAtRef.current > RESTART_LOCK_MS) start();
   });
 
   useEffect(() => {
