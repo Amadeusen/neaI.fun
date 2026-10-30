@@ -1,30 +1,35 @@
 import Link from "next/link";
-import type { GameManifest } from "@/games/types";
+import type { CSSProperties } from "react";
+import type { GameListing } from "@/games/types";
 
-/** A big, flat, rounded tile linking to one game, tinted with its theme. */
-export function GameTile({ game }: { game: GameManifest }) {
+/**
+ * A square, flat, rounded tile linking to one game: its title in the corner
+ * and its illustration filling the rest, tinted with the game's theme.
+ * Thumbnails can read the accent color through `--tile-accent`.
+ */
+export function GameTile({ game }: { game: GameListing }) {
+  const { manifest, Thumbnail } = game;
+  const style = {
+    background: manifest.theme.tile,
+    "--tile-accent": manifest.theme.accent,
+  } as CSSProperties;
+
   return (
     <Link
-      href={`/${game.slug}`}
-      className="group relative flex h-36 items-center overflow-hidden rounded-[var(--radius-tile)] px-6 transition-transform duration-200 hover:-translate-y-1 active:translate-y-0"
-      style={{ background: game.theme.tile }}
+      href={`/${manifest.slug}`}
+      className="group relative block aspect-square overflow-hidden rounded-[var(--radius-tile)] shadow-[inset_0_0_0_1px_rgb(0_0_0/0.04)] transition-transform duration-200 hover:-translate-y-1 active:translate-y-0"
+      style={style}
     >
-      <div className="relative z-10 max-w-[65%]">
-        <h2
-          className="font-display text-3xl leading-none font-bold"
-          style={{ color: game.theme.accent }}
-        >
-          {game.title}
-        </h2>
-        <p className="mt-2 text-sm leading-snug text-ink/70">{game.tagline}</p>
+      <div className="absolute inset-x-0 bottom-0 top-[14%]">
+        <Thumbnail />
       </div>
 
-      <span
-        aria-hidden
-        className="absolute -right-2 bottom-[-0.15em] rotate-[-8deg] text-[6.5rem] leading-none transition-transform duration-300 group-hover:scale-110 group-hover:rotate-0"
+      <h2
+        className="absolute top-3 left-4 font-display text-xl leading-tight font-bold sm:top-4 sm:left-5 sm:text-2xl"
+        style={{ color: manifest.theme.accent }}
       >
-        {game.emoji}
-      </span>
+        {manifest.title}
+      </h2>
     </Link>
   );
 }
