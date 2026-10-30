@@ -16,7 +16,7 @@ const SLIDING: Block = { x: 66, y: 39, width: 80, depth: 79 };
 /** Home page tile art for Stack (static SVG, no client JS). */
 export function StackThumbnail() {
   return (
-    <svg viewBox="-185 -205 370 370" className="h-full w-full" aria-hidden>
+    <svg viewBox="-185 -185 370 330" className="h-full w-full" aria-hidden>
       {/* Drifting clouds. */}
       <g fill="#fff" className="transition-transform duration-700 group-hover:translate-x-3">
         <ellipse cx="-110" cy="-170" rx="34" ry="12" opacity="0.8" />

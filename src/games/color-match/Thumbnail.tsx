@@ -8,7 +8,7 @@ const GRID_Y = 112;
 /** Home page tile art for Color Match (static SVG, no client JS). */
 export function ColorMatchThumbnail() {
   return (
-    <svg viewBox="0 0 200 200" className="h-full w-full" aria-hidden>
+    <svg viewBox="10 48 180 150" className="h-full w-full" aria-hidden>
       {/* Target color card. */}
       <rect x="44" y="60" width="112" height="38" rx="10" fill="rgb(0 0 0 / 0.12)" transform="translate(0 3)" />
       <rect x="44" y="60" width="112" height="38" rx="10" fill={TARGET} />

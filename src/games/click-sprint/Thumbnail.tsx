@@ -3,7 +3,7 @@ const ACCENT = "var(--tile-accent)";
 /** Home page tile art for Click Sprint (static SVG, no client JS). */
 export function ClickSprintThumbnail() {
   return (
-    <svg viewBox="0 0 200 200" className="h-full w-full" aria-hidden>
+    <svg viewBox="10 48 180 150" className="h-full w-full" aria-hidden>
       {/* Ripples spreading from the button. */}
       <circle cx="100" cy="122" r="66" fill="none" stroke={ACCENT} strokeWidth="3" opacity="0.12" />
       <circle cx="100" cy="122" r="55" fill="none" stroke={ACCENT} strokeWidth="3" opacity="0.25" />
