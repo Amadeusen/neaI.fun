@@ -1,120 +1,93 @@
-import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { useRef, useState } from "react";
+import { sfx } from "@/lib/sfx";
 import { useBestScore } from "@/lib/storage";
-import { BASE_SIZE, BASE_SPEED, GAME_SIZE, MAX_SPEED, SPEED_STEP } from "./constants";
-import { sliceBlock } from "./geometry";
+import { useKeyPress } from "@/lib/useKeyPress";
+import { dropFeedback } from "./feedback";
 import { manifest } from "./manifest";
-import { baseBlock, nextSlidingBlock } from "./rules";
+import { baseBlock, resolveDrop } from "./rules";
 import { useDebris } from "./useDebris";
-import type { Axis, Block, Phase } from "./types";
+import { useSlidingBlock } from "./useSlidingBlock";
+import type { Block, Phase } from "./types";
 
 /** Space presses right after losing are ignored, so mashing doesn't skip the result. */
 const RESTART_LOCK_MS = 700;
-/** Longest frame step simulated, so returning to a hidden tab doesn't teleport the block. */
-const MAX_FRAME_S = 0.05;
+
+/** The latest drop, for one-shot effects; `id` changes on every drop. */
+export interface DropEvent {
+  id: number;
+  kind: "place" | "perfect" | "grow";
+  streak: number;
+}
 
 /**
- * All of Stack's game state and rules: the animation loop that slides the
- * current block, dropping it, scoring and restarting. Rendering lives in
- * Game.tsx and its children; this hook knows nothing about SVG.
+ * Stack's game state and rules: starting, dropping (normal, perfect, grow,
+ * miss), scoring and restarting, plus sound and vibration. The sliding
+ * motion lives in useSlidingBlock; rendering lives in Game.tsx's children.
  */
 export function useStackGame() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [blocks, setBlocks] = useState<Block[]>(() => [baseBlock()]);
-  const [current, setCurrent] = useState<Block | null>(null);
   const [isNewBest, setIsNewBest] = useState(false);
+  const [lastDrop, setLastDrop] = useState<DropEvent | null>(null);
+  const slider = useSlidingBlock();
   const { debris, spawnDebris, clearDebris } = useDebris();
   const { best, submit } = useBestScore(manifest.slug);
 
-  // The animation loop and input handlers read and write these refs directly,
-  // so a drop always uses the block's exact position, even between renders.
   const blocksRef = useRef<Block[]>(blocks);
-  const blockRef = useRef<Block>(blocks[0]);
-  const axisRef = useRef<Axis>("x");
-  const dirRef = useRef<1 | -1>(1);
-  const speedRef = useRef(BASE_SPEED);
-  const posRef = useRef(0);
-  const sizeRef = useRef(BASE_SIZE);
-  const rafRef = useRef<number | null>(null);
-  const lastTsRef = useRef<number | null>(null);
+  const streakRef = useRef(0);
+  const historyRef = useRef<Block[]>([]);
   const overAtRef = useRef(0);
-
-  const stopLoop = () => {
-    if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
-    rafRef.current = null;
-    lastTsRef.current = null;
-  };
-
-  useEffect(() => stopLoop, []);
+  const dropId = useRef(0);
 
   const placeBlocks = (next: Block[]) => {
     blocksRef.current = next;
     setBlocks(next);
   };
 
-  const spawnNext = (prev: Block, index: number) => {
-    const dir: 1 | -1 = Math.random() > 0.5 ? 1 : -1;
-    const next = nextSlidingBlock(prev, index, dir);
-    axisRef.current = next.axis;
-    dirRef.current = dir;
-    sizeRef.current = next.size;
-    posRef.current = next.pos;
-    blockRef.current = next.block;
-    setCurrent(next.block);
-  };
-
-  /** One animation frame: move the sliding block, bouncing at the edges. */
-  const tick = (ts: number) => {
-    if (lastTsRef.current == null) lastTsRef.current = ts;
-    const dt = Math.min(MAX_FRAME_S, (ts - lastTsRef.current) / 1000);
-    lastTsRef.current = ts;
-
-    let pos = posRef.current + dirRef.current * speedRef.current * dt;
-    const maxPos = GAME_SIZE - sizeRef.current;
-    if (pos <= 0) {
-      pos = 0;
-      dirRef.current = 1;
-    } else if (pos >= maxPos) {
-      pos = maxPos;
-      dirRef.current = -1;
-    }
-    posRef.current = pos;
-
-    const prev = blockRef.current;
-    const block: Block = axisRef.current === "x" ? { ...prev, x: pos } : { ...prev, y: pos };
-    blockRef.current = block;
-    setCurrent(block);
-    rafRef.current = requestAnimationFrame(tick);
-  };
-
   const start = () => {
-    stopLoop();
     clearDebris();
     const base = baseBlock();
     placeBlocks([base]);
-    speedRef.current = BASE_SPEED;
+    streakRef.current = 0;
+    historyRef.current = [];
     setIsNewBest(false);
-    spawnNext(base, 1);
+    setLastDrop(null);
+    slider.spawn(base, 1);
+    slider.run();
     setPhase("playing");
-    rafRef.current = requestAnimationFrame(tick);
+    sfx.start();
+  };
+
+  const lose = (score: number) => {
+    slider.hide();
+    setPhase("over");
+    overAtRef.current = performance.now();
+    dropFeedback("miss", score, 0);
+    const newBest = submit(score);
+    setIsNewBest(newBest);
+    if (newBest) window.setTimeout(sfx.newBest, 450);
   };
 
   const drop = () => {
     const placed = blocksRef.current;
-    const result = sliceBlock(blockRef.current, placed[placed.length - 1], axisRef.current);
+    const moving = slider.blockRef.current;
+    if (!moving) return;
+    const top = placed[placed.length - 1];
+    const outcome = resolveDrop(moving, top, slider.axisRef.current, streakRef.current, historyRef.current);
 
-    if (!result) {
-      stopLoop();
-      setCurrent(null);
-      setPhase("over");
-      overAtRef.current = performance.now();
-      setIsNewBest(submit(placed.length - 1));
+    if (outcome.kind === "miss") {
+      lose(placed.length - 1);
       return;
     }
 
-    spawnDebris(result.pieces, placed.length);
-    placeBlocks([...placed, result.placed]);
-    speedRef.current = Math.min(MAX_SPEED, speedRef.current + SPEED_STEP);
-    spawnNext(result.placed, placed.length + 1);
+    streakRef.current = outcome.streak;
+    historyRef.current = outcome.history;
+    spawnDebris(outcome.pieces, placed.length);
+    placeBlocks([...placed, outcome.placed]);
+    setLastDrop({ id: dropId.current++, kind: outcome.kind, streak: outcome.streak });
+    dropFeedback(outcome.kind, placed.length, outcome.streak);
+    slider.speedUp();
+    slider.spawn(outcome.placed, placed.length + 1);
   };
 
   /** Tap / click: starts a run when idle, drops the block while playing. */
@@ -124,23 +97,17 @@ export function useStackGame() {
   };
 
   // Space bar works from anywhere on the page, no need to focus the stage.
-  const onKeyDown = useEffectEvent((e: KeyboardEvent) => {
-    if (e.key !== " " || e.repeat) return;
-    e.preventDefault();
+  useKeyPress(" ", () => {
     if (phase !== "over") activate();
     else if (performance.now() - overAtRef.current > RESTART_LOCK_MS) start();
   });
 
-  useEffect(() => {
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
-
   return {
     phase,
     blocks,
-    current,
+    current: slider.current,
     debris,
+    lastDrop,
     score: Math.max(0, blocks.length - 1),
     best,
     isNewBest,
