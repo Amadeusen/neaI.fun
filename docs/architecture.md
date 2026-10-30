@@ -42,8 +42,8 @@ src/
 ## How a page is built
 
 **Home (`/`)** reads `games` from `src/games/registry.ts`. Each entry pairs
-a game's `manifest` (plain data) with its `Thumbnail` (a server component
-drawing static SVG). Both render to HTML at build time, so the home page
+a game's `manifest` (plain data) with its `Thumbnail` and `Title` (server
+components drawing static SVG/HTML). All render to HTML at build time, so the home page
 ships no game JavaScript at all.
 
 **A game (`/stack`)** has its own route file, `src/app/stack/page.tsx`. It:

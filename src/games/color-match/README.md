@@ -1,10 +1,18 @@
 # Color Match
 
 A target color is shown above a grid of swatches. Pick the swatch that
-matches it exactly. The run is endless: each correct pick moves you to the
-next level, one wrong pick ends the run and briefly reveals the right
-answer. The score is the number of levels cleared, and the best is saved in
-the browser.
+matches it exactly. The run is endless and played against the clock:
+
+- **Clock**: 30 seconds at the start; every right pick adds 5 seconds and
+  moves you to the next level. Under 5 seconds the clock pulses red.
+- **Hearts**: three pixel-art hearts. A wrong pick costs a heart and greys
+  that swatch out, and you try the same grid again.
+- **Game over** when the hearts or the clock run out: the right answer is
+  outlined for a moment, then the results. The score is the number of
+  levels cleared, and the best is saved in the browser.
+
+Tune these with `START_MS`, `BONUS_MS`, `LIVES` and `URGENT_MS` at the top of
+`useColorMatch.ts`.
 
 ## Difficulty
 
@@ -32,7 +40,10 @@ approaches 2.5. Tune it with the constants at the top of `rounds.ts`.
 | File             | Role                                                              |
 | ---------------- | ----------------------------------------------------------------- |
 | `manifest.ts`    | Title, description, theme                                         |
-| `Game.tsx`       | State, sounds and layout: level, target card, messages, result    |
+| `Game.tsx`       | Layout of the screens: intro, run (HUD, target, grid), results    |
+| `useColorMatch.ts` | Run state: clock, bonus time, hearts, retries, sounds, best score |
+| `Hud.tsx`        | Hearts, clock with "+5s" popup, level                             |
+| `PixelHeart.tsx` | A 7 × 6 pixel-art heart, full or lost                             |
 | `Intro.tsx`      | Start screen: shifting mosaic with an odd tile, title, Start      |
 | `Title.tsx`      | "Color Match" logo, each letter of "Color" in its own hue          |
 | `SwatchGrid.tsx` | The grid; fits any size and screen, swatches pop in each level    |
@@ -42,7 +53,7 @@ approaches 2.5. Tune it with the constants at the top of `rounds.ts`.
 ## Notes
 
 - Swatches pop in one after another on every level, the right pick pops
-  with a check mark, a wrong one shakes the target and reveals the answer.
+  with a check mark, a wrong one shakes the target and fades out.
 - Easy-level swatches are at least `MIN_HUE_GAP` degrees of hue apart from
   each other, so no early round has two swatches that look identical.
 - The grid's width is `min(86vw, 26rem, --grid-h × cols / rows)`, so it fits

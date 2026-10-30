@@ -106,11 +106,11 @@ export default function MyGamePage() {
 
 ## 6. Registry
 
-In `src/games/registry.ts`, import the manifest and thumbnail and add an
+In `src/games/registry.ts`, import the manifest, thumbnail and title and add an
 entry where the tile should appear:
 
 ```ts
-{ manifest: myGame, Thumbnail: MyGameThumbnail },
+{ manifest: myGame, Thumbnail: MyGameThumbnail, Title: MyGameTitle },
 ```
 
 ## 7. Readme
