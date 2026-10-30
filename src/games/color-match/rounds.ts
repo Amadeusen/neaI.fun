@@ -10,7 +10,8 @@
  *   levels are relaxed and the late game becomes a color-vision test.
  */
 
-export type Phase = "idle" | "playing" | "done";
+/** "reveal": the run just ended and the answer is shown before the results. */
+export type Phase = "idle" | "playing" | "reveal" | "done";
 
 export interface Round {
   cols: number;
