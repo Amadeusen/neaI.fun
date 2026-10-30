@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { haptics } from "@/lib/haptics";
 import { sfx } from "@/lib/sfx";
 import { useBestScore } from "@/lib/storage";
+import { useCountdown } from "@/lib/useCountdown";
+import { useTimeouts } from "@/lib/useTimeouts";
 import { manifest } from "./manifest";
 import { buildRound, isNewGridLevel, type Phase, type Round } from "./rounds";
 
@@ -10,9 +12,10 @@ export const BONUS_MS = 5_000;
 export const LIVES = 3;
 /** Under this much time left, the clock turns urgent. */
 export const URGENT_MS = 5_000;
-const TICK_MS = 100;
 /** How long the answer stays revealed before the results screen. */
 const GAME_OVER_DELAY_MS = 1200;
+/** Pause on a right pick before the next level appears. */
+const NEXT_LEVEL_DELAY_MS = 300;
 
 /**
  * Color Match's state: endless levels against a clock. The run starts with
@@ -24,29 +27,21 @@ const GAME_OVER_DELAY_MS = 1200;
 export function useColorMatch() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [level, setLevel] = useState(1);
+  const [cleared, setCleared] = useState(0);
   const [round, setRound] = useState<Round | null>(null);
   const [wrongPicks, setWrongPicks] = useState<number[]>([]);
   const [solved, setSolved] = useState<number | null>(null);
   const [lives, setLives] = useState(LIVES);
-  const [msLeft, setMsLeft] = useState(START_MS);
   const [bonusId, setBonusId] = useState(0);
   const [isNewBest, setIsNewBest] = useState(false);
   const { best, submit } = useBestScore(manifest.slug);
+  const clock = useCountdown();
+  const later = useTimeouts();
 
-  const endsAtRef = useRef(0);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const levelRef = useRef(1);
+  const clearedRef = useRef(0);
   const overRef = useRef(false);
 
-  const stopClock = () => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    intervalRef.current = null;
-  };
-
-  useEffect(() => stopClock, []);
-
   const goTo = (next: number) => {
-    levelRef.current = next;
     setLevel(next);
     setRound(buildRound(next));
     setWrongPicks([]);
@@ -58,47 +53,44 @@ export function useColorMatch() {
   const gameOver = () => {
     if (overRef.current) return;
     overRef.current = true;
-    stopClock();
+    clock.stop();
     setPhase("reveal");
     sfx.fail();
     haptics.heavy();
-    window.setTimeout(() => {
+    later(() => {
       setPhase("done");
-      const newBest = submit(levelRef.current - 1);
+      const newBest = submit(clearedRef.current);
       setIsNewBest(newBest);
       if (newBest) sfx.newBest();
     }, GAME_OVER_DELAY_MS);
   };
 
   const start = () => {
-    stopClock();
     overRef.current = false;
+    clearedRef.current = 0;
+    setCleared(0);
     goTo(1);
     setLives(LIVES);
     setBonusId(0);
     setIsNewBest(false);
     setPhase("playing");
     sfx.start();
-
-    endsAtRef.current = performance.now() + START_MS;
-    setMsLeft(START_MS);
-    intervalRef.current = setInterval(() => {
-      const left = Math.max(0, endsAtRef.current - performance.now());
-      setMsLeft(left);
-      if (left === 0) gameOver();
-    }, TICK_MS);
+    clock.start(START_MS, { onEnd: gameOver });
   };
 
   const pick = (index: number) => {
     if (phase !== "playing" || !round || solved !== null || wrongPicks.includes(index)) return;
 
     if (round.options[index] === round.target) {
+      clearedRef.current += 1;
+      setCleared(clearedRef.current);
       setSolved(index);
-      endsAtRef.current += BONUS_MS;
+      clock.add(BONUS_MS);
       setBonusId((id) => id + 1);
       sfx.success(level);
       haptics.light();
-      window.setTimeout(() => goTo(level + 1), 300);
+      // The clock may run out during the pause: then the run is over.
+      later(() => !overRef.current && goTo(level + 1), NEXT_LEVEL_DELAY_MS);
       return;
     }
 
@@ -116,11 +108,12 @@ export function useColorMatch() {
   return {
     phase,
     level,
+    cleared,
     round,
     wrongPicks,
     solved,
     lives,
-    msLeft,
+    msLeft: phase === "idle" ? START_MS : clock.msLeft,
     bonusId,
     best,
     isNewBest,

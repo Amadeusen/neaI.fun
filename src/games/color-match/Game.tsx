@@ -15,9 +15,8 @@ import { useColorMatch } from "./useColorMatch";
  */
 export default function ColorMatch() {
   const game = useColorMatch();
-  const { round, level } = game;
+  const { round, level, cleared } = game;
   const inRun = game.phase === "playing" || game.phase === "reveal";
-  const cleared = level - 1;
 
   let message = "";
   if (game.phase === "reveal") message = game.lives === 0 ? "Out of hearts!" : "Time's up!";
