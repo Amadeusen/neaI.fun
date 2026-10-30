@@ -1,6 +1,7 @@
 "use client";
 
 import { useAspectRatio } from "@/lib/useAspectRatio";
+import { cn } from "@/lib/utils";
 import { cameraViewBox } from "./camera";
 import { DEFAULT_ASPECT } from "./constants";
 import { StackBackground } from "./StackBackground";
@@ -26,7 +27,10 @@ export default function Stack() {
       onPointerDown={(e) => {
         if (e.button === 0) game.activate();
       }}
-      className="relative h-full max-h-[780px] w-full max-w-[520px] touch-manipulation overflow-hidden rounded-[var(--radius-card)] select-none"
+      className={cn(
+        "relative h-full max-h-[780px] w-full max-w-[520px] touch-manipulation overflow-hidden rounded-[var(--radius-card)] select-none",
+        game.phase === "over" && "stage-shake",
+      )}
       aria-label="Stack game. Press space or tap to drop the block."
     >
       <StackBackground score={game.score} />
@@ -36,12 +40,14 @@ export default function Stack() {
         blocks={game.blocks}
         debris={game.debris}
         current={playing ? game.current : null}
+        lastDrop={game.lastDrop}
       />
       <StackHud
         phase={game.phase}
         score={game.score}
         best={game.best}
         isNewBest={game.isNewBest}
+        lastDrop={game.lastDrop}
         onRestart={game.start}
       />
     </div>
