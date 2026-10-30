@@ -1,9 +1,10 @@
 import { useCallback, useRef, useState } from "react";
+import { useTimeouts } from "@/lib/useTimeouts";
 import { BLOCK_HEIGHT } from "./constants";
 import { blockScreenCenter } from "./geometry";
 import type { Block, Debris } from "./types";
 
-/** Matches the `debris-fall-3d` animation in src/styles/animations.css. */
+/** Matches the `debris-fall-3d` animation in src/styles/game-animations.css. */
 const DEBRIS_LIFETIME_MS = 550;
 
 /** Picks a fall trajectory that drifts the piece away from the tower's center. */
@@ -21,6 +22,7 @@ function fallTrajectory(piece: Block, layerIndex: number) {
 export function useDebris() {
   const [debris, setDebris] = useState<Debris[]>([]);
   const nextId = useRef(0);
+  const later = useTimeouts();
 
   const spawnDebris = useCallback((pieces: Block[], layerIndex: number) => {
     if (!pieces.length) return;
@@ -33,11 +35,11 @@ export function useDebris() {
     }));
     setDebris((d) => [...d, ...newPieces]);
     newPieces.forEach((piece) => {
-      window.setTimeout(() => {
+      later(() => {
         setDebris((d) => d.filter((p) => p.id !== piece.id));
       }, DEBRIS_LIFETIME_MS);
     });
-  }, []);
+  }, [later]);
 
   const clearDebris = useCallback(() => setDebris([]), []);
 

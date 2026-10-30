@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { sfx } from "@/lib/sfx";
 import { useBestScore } from "@/lib/storage";
 import { useKeyPress } from "@/lib/useKeyPress";
+import { useTimeouts } from "@/lib/useTimeouts";
 import { dropFeedback } from "./feedback";
 import { manifest } from "./manifest";
 import { baseBlock, resolveDrop } from "./rules";
@@ -32,6 +33,7 @@ export function useStackGame() {
   const slider = useSlidingBlock();
   const { debris, spawnDebris, clearDebris } = useDebris();
   const { best, submit } = useBestScore(manifest.slug);
+  const later = useTimeouts();
 
   const blocksRef = useRef<Block[]>(blocks);
   const streakRef = useRef(0);
@@ -65,7 +67,7 @@ export function useStackGame() {
     dropFeedback("miss", score, 0);
     const newBest = submit(score);
     setIsNewBest(newBest);
-    if (newBest) window.setTimeout(sfx.newBest, 450);
+    if (newBest) later(sfx.newBest, 450);
   };
 
   const drop = () => {
