@@ -1,19 +1,20 @@
 import { GameTile } from "@/components/home/GameTile";
+import { Logo } from "@/components/shared/Logo";
 import { games } from "@/games/registry";
 
 export default function Home() {
   return (
-    <main className="mx-auto w-full max-w-[900px] px-4 pt-10 pb-16 sm:pt-16">
+    <main className="mx-auto w-full max-w-[960px] px-4 pt-10 pb-16 sm:pt-16">
       <header className="mb-10 text-center">
-        <h1 className="font-display text-5xl font-bold tracking-tight sm:text-6xl">
-          neaI<span className="text-ink-muted">.fun</span>
+        <h1>
+          <Logo className="text-5xl sm:text-6xl" />
         </h1>
-        <p className="mt-3 text-ink-muted">Tiny interactive things to poke at.</p>
+        <p className="mt-3 text-ink-muted">Games and stuff</p>
       </header>
 
-      <ul className="grid grid-cols-1 gap-x-[18px] gap-y-[15px] sm:grid-cols-2">
+      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
         {games.map((game) => (
-          <li key={game.slug}>
+          <li key={game.manifest.slug}>
             <GameTile game={game} />
           </li>
         ))}
