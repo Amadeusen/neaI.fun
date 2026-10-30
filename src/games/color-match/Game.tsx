@@ -4,67 +4,64 @@ import { useState } from "react";
 import { useBestScore } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 import { manifest } from "./manifest";
-import { buildRound, TOTAL_ROUNDS, type Phase, type Round } from "./rounds";
+import { buildRound, HARD_FROM, isNewGridLevel, type Phase, type Round } from "./rounds";
+import { SwatchGrid } from "./SwatchGrid";
 
+/**
+ * Color Match: an endless run of levels. Pick the swatch matching the target;
+ * one wrong pick ends the run. The score is the number of levels cleared.
+ * Level rules and color generation live in rounds.ts.
+ */
 export default function ColorMatch() {
   const [phase, setPhase] = useState<Phase>("idle");
-  const [round, setRound] = useState(0);
-  const [score, setScore] = useState(0);
-  const [current, setCurrent] = useState<Round | null>(null);
-  const [picked, setPicked] = useState<string | null>(null);
+  const [level, setLevel] = useState(1);
+  const [round, setRound] = useState<Round | null>(null);
+  const [picked, setPicked] = useState<number | null>(null);
   const [isNewBest, setIsNewBest] = useState(false);
   const { best, submit } = useBestScore(manifest.slug);
 
-  const start = () => {
-    setPhase("playing");
-    setRound(1);
-    setScore(0);
-    setCurrent(buildRound());
+  const goTo = (next: number) => {
+    setLevel(next);
+    setRound(buildRound(next));
     setPicked(null);
+  };
+
+  const start = () => {
+    goTo(1);
     setIsNewBest(false);
+    setPhase("playing");
   };
 
-  const finish = (finalScore: number) => {
-    setPhase("done");
-    setIsNewBest(submit(finalScore));
-  };
+  const pick = (index: number) => {
+    if (phase !== "playing" || !round || picked !== null) return;
+    setPicked(index);
 
-  const pick = (color: string) => {
-    if (phase !== "playing" || !current || picked) return;
-    setPicked(color);
-
-    if (color !== current.target) {
-      window.setTimeout(() => finish(score), 900);
+    if (round.options[index] !== round.target) {
+      const cleared = level - 1;
+      window.setTimeout(() => {
+        setPhase("done");
+        setIsNewBest(submit(cleared));
+      }, 1100);
       return;
     }
-
-    const nextScore = score + 1;
-    window.setTimeout(() => {
-      setScore(nextScore);
-      if (round >= TOTAL_ROUNDS) {
-        finish(nextScore);
-        return;
-      }
-      setRound(round + 1);
-      setCurrent(buildRound());
-      setPicked(null);
-    }, 280);
+    window.setTimeout(() => goTo(level + 1), 280);
   };
 
-  const wrong = picked !== null && current !== null && picked !== current.target;
+  const wrong = picked !== null && round !== null && round.options[picked] !== round.target;
+  const cleared = level - 1;
+
+  let message = "";
+  if (wrong) message = "Not quite! That was the one.";
+  else if (picked === null && level === HARD_FROM) message = "Now it gets tricky…";
+  else if (picked === null && isNewGridLevel(level)) message = "Bigger grid!";
 
   return (
-    <div className="flex h-full w-full max-w-md flex-col items-center justify-center gap-[3dvh] text-center">
+    <div className="flex h-full w-full max-w-xl flex-col items-center justify-center gap-[2.5dvh] text-center">
       <div className="flex flex-wrap justify-center gap-2">
-        {phase !== "idle" && (
-          <>
-            <span className="pill">
-              Round <strong>{Math.max(1, Math.min(round, TOTAL_ROUNDS))}</strong>/{TOTAL_ROUNDS}
-            </span>
-            <span className="pill">
-              Score <strong>{score}</strong>
-            </span>
-          </>
+        {phase === "playing" && (
+          <span className="pill">
+            Level <strong>{level}</strong>
+          </span>
         )}
         {best !== null && (
           <span className="pill">
@@ -78,8 +75,9 @@ export default function ColorMatch() {
           <span className="text-7xl" aria-hidden>
             {manifest.emoji}
           </span>
-          <p className="max-w-64 text-ink-muted">
-            Find the matching color, ten rounds in a row. One wrong pick ends the run.
+          <p className="max-w-72 text-ink-muted">
+            Find the matching color. From level {HARD_FROM} the grid grows and the shades get
+            closer and closer. One wrong pick ends the run.
           </p>
           <button type="button" onClick={start} className="btn">
             Start
@@ -87,53 +85,33 @@ export default function ColorMatch() {
         </div>
       )}
 
-      {phase === "playing" && current && (
-        <>
+      {phase === "playing" && round && (
+        <div className="flex flex-col items-center gap-[2.5dvh] [--grid-h:46dvh] [@media(max-height:500px)]:flex-row [@media(max-height:500px)]:[--grid-h:66dvh]">
           <div className="flex flex-col items-center gap-2">
             <p className="text-sm text-ink-muted">Find this color</p>
             <div
               className={cn(
-                "h-[min(22dvh,9rem)] w-[min(70vw,16rem)] rounded-[var(--radius-card)] shadow-[inset_0_0_0_1px_rgb(0_0_0/0.08)]",
+                "h-[min(13dvh,6rem)] w-[min(60vw,14rem)] rounded-[var(--radius-card)] shadow-[inset_0_0_0_1px_rgb(0_0_0/0.08)]",
                 wrong && "shake",
               )}
-              style={{ background: current.target }}
+              style={{ background: round.target }}
             />
           </div>
+          <SwatchGrid round={round} picked={picked} onPick={pick} />
+        </div>
+      )}
 
-          <div className="grid grid-cols-3 gap-3">
-            {current.options.map((color, i) => {
-              const reveal = picked !== null && color === current.target;
-              return (
-                <button
-                  key={`${color}-${i}`}
-                  type="button"
-                  onClick={() => pick(color)}
-                  aria-label={`Swatch ${i + 1}`}
-                  className={cn(
-                    "size-[min(24vw,14dvh,6.5rem)] rounded-[var(--radius-tile)] shadow-[0_4px_0_rgb(0_0_0/0.15)] transition-transform active:translate-y-1 active:shadow-none",
-                    picked === null && "hover:-translate-y-0.5",
-                    reveal && "ring-4 ring-ink ring-offset-2 ring-offset-screen",
-                    picked === color && !reveal && "opacity-40",
-                  )}
-                  style={{ background: color }}
-                />
-              );
-            })}
-          </div>
-
-          <p className="h-6 font-semibold" aria-live="polite">
-            {wrong && "Not quite! That was the one."}
-          </p>
-        </>
+      {phase === "playing" && (
+        <p className="h-6 font-semibold" aria-live="polite">
+          {message}
+        </p>
       )}
 
       {phase === "done" && (
         <div className="flex flex-col items-center gap-4">
-          <p className="font-display text-3xl font-bold">
-            {score === TOTAL_ROUNDS ? "Perfect eye!" : isNewBest ? "New best!" : "Run over"}
-          </p>
+          <p className="font-display text-3xl font-bold">{isNewBest ? "New best!" : "Run over"}</p>
           <p className="text-ink-muted">
-            You matched {score} of {TOTAL_ROUNDS}
+            You cleared {cleared} {cleared === 1 ? "level" : "levels"}
           </p>
           <button type="button" onClick={start} className="btn">
             Play again
