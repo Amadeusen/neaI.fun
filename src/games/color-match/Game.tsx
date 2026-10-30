@@ -4,43 +4,7 @@ import { useState } from "react";
 import { useBestScore } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 import { manifest } from "./manifest";
-
-const TOTAL_ROUNDS = 10;
-const SWATCH_COUNT = 6;
-/** Distractors stay at least this many degrees of hue away from the target. */
-const MIN_HUE_GAP = 18;
-
-type Phase = "idle" | "playing" | "done";
-
-interface Round {
-  target: string;
-  options: string[];
-}
-
-function randomHsl(avoidHue?: number): string {
-  let hue = Math.floor(Math.random() * 360);
-  if (avoidHue !== undefined) {
-    const gap = Math.abs(((hue - avoidHue + 540) % 360) - 180);
-    if (gap < MIN_HUE_GAP) hue = (hue + 2 * MIN_HUE_GAP) % 360;
-  }
-  const saturation = 65 + Math.floor(Math.random() * 20);
-  const lightness = 45 + Math.floor(Math.random() * 15);
-  return `hsl(${hue} ${saturation}% ${lightness}%)`;
-}
-
-function buildRound(): Round {
-  const target = randomHsl();
-  const targetHue = Number(target.slice(4).split(" ")[0]);
-  const options = [target];
-  while (options.length < SWATCH_COUNT) {
-    options.push(randomHsl(targetHue));
-  }
-  for (let i = options.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [options[i], options[j]] = [options[j], options[i]];
-  }
-  return { target, options };
-}
+import { buildRound, TOTAL_ROUNDS, type Phase, type Round } from "./rounds";
 
 export default function ColorMatch() {
   const [phase, setPhase] = useState<Phase>("idle");
@@ -48,7 +12,7 @@ export default function ColorMatch() {
   const [score, setScore] = useState(0);
   const [current, setCurrent] = useState<Round | null>(null);
   const [picked, setPicked] = useState<string | null>(null);
-  const [bestBeforeRun, setBestBeforeRun] = useState<number | null>(null);
+  const [isNewBest, setIsNewBest] = useState(false);
   const { best, submit } = useBestScore(manifest.slug);
 
   const start = () => {
@@ -57,12 +21,12 @@ export default function ColorMatch() {
     setScore(0);
     setCurrent(buildRound());
     setPicked(null);
-    setBestBeforeRun(best);
+    setIsNewBest(false);
   };
 
   const finish = (finalScore: number) => {
     setPhase("done");
-    submit(finalScore);
+    setIsNewBest(submit(finalScore));
   };
 
   const pick = (color: string) => {
@@ -88,7 +52,6 @@ export default function ColorMatch() {
   };
 
   const wrong = picked !== null && current !== null && picked !== current.target;
-  const isNewBest = phase === "done" && score > (bestBeforeRun ?? 0);
 
   return (
     <div className="flex h-full w-full max-w-md flex-col items-center justify-center gap-[3dvh] text-center">
