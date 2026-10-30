@@ -24,7 +24,7 @@ src/
 
   components/                   UI shared by several pages
     shared/Logo.tsx             "neaI.fun" wordmark (home title + game top bar)
-    home/GameTile.tsx           Square tile on the home page
+    home/GameTile.tsx           Wide tile on the home page
     game/GameScreen.tsx         Full-viewport frame around every game
 
   styles/                       Plain CSS shared by every screen (see styling.md)

@@ -67,10 +67,10 @@ Rules of thumb:
 ## 3. Thumbnail
 
 `src/games/my-game/Thumbnail.tsx`: a server component returning an SVG
-(usually `viewBox="0 0 200 200"`, `className="h-full w-full"`) that shows
-what the game is about. Use `var(--tile-accent)` for the accent color and
-`group-hover:` utilities for an optional hover effect. The tile title is
-drawn over the top-left corner, so keep that area fairly empty.
+(`className="h-full w-full"`) that shows what the game is about. It is drawn
+in a square on the right side of the tile, behind the title, so crop the
+`viewBox` tightly around the drawing. Use `var(--tile-accent)` for the
+accent color and `group-hover:` utilities for an optional hover effect.
 
 ## 4. Route
 

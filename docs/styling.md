@@ -84,9 +84,10 @@ Games must be fully playable without scrolling, on phones too:
 
 ## Home tiles
 
-Tiles are squares: the game title in the top-left corner (accent color,
-`font-display`) and the game's `Thumbnail` filling the rest. A thumbnail is
-static SVG that shows what the game is about at a glance. It may use
-`group-hover:` utilities for a small hover animation, but no state or
-effects. Reuse the game's own drawing code where possible; Stack's tile is
+Tiles are wide 16:9 rectangles, three per row on desktop, two on tablets
+and one on phones. The game title is set large on the left (accent color,
+`font-display`), and the game's `Thumbnail` fills a square on the right side
+of the tile, behind the title. A thumbnail is static SVG that shows what the
+game is about at a glance. It may use `group-hover:` utilities for a small
+hover animation, but no state or effects. Reuse the game's own drawing code where possible; Stack's tile is
 drawn with its real `BlockMesh` and `Ground`.
