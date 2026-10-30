@@ -12,7 +12,7 @@ export default function Home() {
         <p className="mt-3 text-ink-muted">Games and stuff</p>
       </header>
 
-      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+      <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
         {games.map((game) => (
           <li key={game.manifest.slug}>
             <GameTile game={game} />
