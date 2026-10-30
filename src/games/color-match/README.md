@@ -18,7 +18,7 @@ the browser.
 
 - Colors are random HSL with fairly high saturation and mid lightness, so
   they stay vivid.
-- Distractors are kept at least `MIN_HUE_GAP` degrees of hue away from the
-  target, so no round has two swatches that look identical.
+- Every swatch in a round is at least `MIN_HUE_GAP` degrees of hue away
+  from every other one, so no round has two swatches that look identical.
 - Rounds are only generated after Start is pressed, so the server render
   and the first client render always match.
