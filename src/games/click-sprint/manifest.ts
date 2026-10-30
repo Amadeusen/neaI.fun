@@ -6,7 +6,10 @@ export const manifest: GameManifest = {
   tagline: "How many clicks can you land in 10 seconds?",
   description:
     "A pure reflex test: smash the button as many times as you can before the timer runs out, then see your clicks-per-second score.",
-  accentColor: "#f0563d",
   emoji: "🖱️",
-  tags: ["reflex", "arcade"],
+  theme: {
+    accent: "#f0563d",
+    background: "#fff3ec",
+    tile: "#ffe1d4",
+  },
 };
