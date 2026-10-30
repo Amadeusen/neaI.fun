@@ -1,21 +1,20 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { useBestScore } from "@/lib/storage";
 import { StackBackground } from "./StackBackground";
 import { Ground } from "./Ground";
 import { BlockMesh } from "./BlockMesh";
-import { blockPoints, blockScreenCenter } from "./geometry";
+import { blockPoints, blockScreenCenter, sliceBlock } from "./geometry";
+import { manifest } from "./manifest";
 import {
   BASE_SIZE,
   BASE_SPEED,
   BLOCK_HEIGHT,
-  CANVAS_H,
-  CANVAS_W,
+  DEFAULT_ASPECT,
   GAME_SIZE,
   MAX_SPEED,
-  MIN_OVERLAP,
   SPEED_STEP,
-  VIEW_H,
   VIEW_PAD,
   VIEW_W,
 } from "./constants";
@@ -43,18 +42,43 @@ function fallTrajectory(piece: Block, layerIndex: number) {
   };
 }
 
+/** Tracks an element's width / height ratio so the camera can fill any screen shape. */
+function useAspectRatio<T extends HTMLElement>() {
+  const ref = useRef<T>(null);
+  const [aspect, setAspect] = useState(DEFAULT_ASPECT);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      if (width > 0 && height > 0) setAspect(width / height);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return [ref, aspect] as const;
+}
+
 export default function Stack() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [blocks, setBlocks] = useState<Block[]>([baseBlock()]);
   const [current, setCurrent] = useState<Block | null>(null);
   const [debris, setDebris] = useState<Debris[]>([]);
+  const [stageRef, aspect] = useAspectRatio<HTMLDivElement>();
+  const { best, submit } = useBestScore(manifest.slug);
+  const [bestBeforeRun, setBestBeforeRun] = useState<number | null>(null);
 
+  // The animation loop and input handlers read and write these refs directly,
+  // so a drop always uses the block's exact position, even between renders.
+  const blocksRef = useRef<Block[]>([baseBlock()]);
+  const blockRef = useRef<Block>(baseBlock());
   const axisRef = useRef<Axis>("x");
   const dirRef = useRef<1 | -1>(1);
   const speedRef = useRef(BASE_SPEED);
   const posRef = useRef(0);
   const sizeRef = useRef(BASE_SIZE);
-  const blockRef = useRef<Block>(baseBlock());
   const rafRef = useRef<number | null>(null);
   const lastTsRef = useRef<number | null>(null);
   const debrisId = useRef(0);
@@ -66,6 +90,11 @@ export default function Stack() {
   };
 
   useEffect(() => stopLoop, []);
+
+  const placeBlocks = (next: Block[]) => {
+    blocksRef.current = next;
+    setBlocks(next);
+  };
 
   const spawnNext = (prev: Block, index: number) => {
     const axis = axisForIndex(index);
@@ -111,8 +140,9 @@ export default function Stack() {
     stopLoop();
     setDebris([]);
     const base = baseBlock();
-    setBlocks([base]);
+    placeBlocks([base]);
     speedRef.current = BASE_SPEED;
+    setBestBeforeRun(best);
     spawnNext(base, 1);
     setPhase("playing");
     rafRef.current = requestAnimationFrame(tick);
@@ -137,65 +167,22 @@ export default function Stack() {
   };
 
   const drop = () => {
-    if (phase !== "playing" || !current) return;
-    const axis = axisRef.current;
+    const placed = blocksRef.current;
+    const top = placed[placed.length - 1];
+    const result = sliceBlock(blockRef.current, top, axisRef.current);
 
-    setBlocks((prev) => {
-      const top = prev[prev.length - 1];
-      const layerIndex = prev.length;
+    if (!result) {
+      stopLoop();
+      setCurrent(null);
+      setPhase("over");
+      submit(placed.length - 1);
+      return;
+    }
 
-      if (axis === "x") {
-        const start = Math.max(current.x, top.x);
-        const end = Math.min(current.x + current.width, top.x + top.width);
-        const overlap = end - start;
-        if (overlap <= MIN_OVERLAP) {
-          stopLoop();
-          setCurrent(null);
-          setPhase("over");
-          return prev;
-        }
-        const pieces: Block[] = [];
-        if (current.x < start) {
-          pieces.push({ x: current.x, y: current.y, width: start - current.x, depth: current.depth });
-        }
-        const rightStart = start + overlap;
-        const rightEnd = current.x + current.width;
-        if (rightEnd > rightStart) {
-          pieces.push({ x: rightStart, y: current.y, width: rightEnd - rightStart, depth: current.depth });
-        }
-        spawnDebris(pieces, layerIndex);
-
-        const newBlock: Block = { x: start, y: top.y, width: overlap, depth: top.depth };
-        speedRef.current = Math.min(MAX_SPEED, speedRef.current + SPEED_STEP);
-        spawnNext(newBlock, prev.length + 1);
-        return [...prev, newBlock];
-      }
-
-      const start = Math.max(current.y, top.y);
-      const end = Math.min(current.y + current.depth, top.y + top.depth);
-      const overlap = end - start;
-      if (overlap <= MIN_OVERLAP) {
-        stopLoop();
-        setCurrent(null);
-        setPhase("over");
-        return prev;
-      }
-      const pieces: Block[] = [];
-      if (current.y < start) {
-        pieces.push({ x: current.x, y: current.y, width: current.width, depth: start - current.y });
-      }
-      const farStart = start + overlap;
-      const farEnd = current.y + current.depth;
-      if (farEnd > farStart) {
-        pieces.push({ x: current.x, y: farStart, width: current.width, depth: farEnd - farStart });
-      }
-      spawnDebris(pieces, layerIndex);
-
-      const newBlock: Block = { x: top.x, y: start, width: top.width, depth: overlap };
-      speedRef.current = Math.min(MAX_SPEED, speedRef.current + SPEED_STEP);
-      spawnNext(newBlock, prev.length + 1);
-      return [...prev, newBlock];
-    });
+    spawnDebris(result.pieces, placed.length);
+    placeBlocks([...placed, result.placed]);
+    speedRef.current = Math.min(MAX_SPEED, speedRef.current + SPEED_STEP);
+    spawnNext(result.placed, placed.length + 1);
   };
 
   const handleActivate = () => {
@@ -203,107 +190,119 @@ export default function Stack() {
     else if (phase === "playing") drop();
   };
 
+  // Space bar works from anywhere on the page, no need to focus the stage.
+  const onKeyDown = useEffectEvent((e: KeyboardEvent) => {
+    if (e.key !== " " || e.repeat) return;
+    e.preventDefault();
+    if (phase === "over") start();
+    else handleActivate();
+  });
+
+  useEffect(() => {
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
   const score = Math.max(0, blocks.length - 1);
+  const isNewBest = phase === "over" && score > (bestBeforeRun ?? 0);
 
   // Framing is derived only from placed blocks (never the live, oscillating
   // `current` block) so the camera holds still while a piece is in flight
   // and only resettles when a block actually lands.
+  const viewH = VIEW_W / aspect;
   const lastPlaced = blocks[blocks.length - 1];
   const topIndex = phase === "playing" ? blocks.length : blocks.length - 1;
-  const topPts = blockPoints(lastPlaced, topIndex);
-  const topY = Math.min(...topPts.map((p) => p[1]));
-
-  const basePts = blockPoints(blocks[0], 0);
-  const baseBottomY = Math.max(...basePts.map((p) => p[1]));
+  const topY = Math.min(...blockPoints(lastPlaced, topIndex).map((p) => p[1]));
+  const baseBottomY = Math.max(...blockPoints(blocks[0], 0).map((p) => p[1]));
 
   const naturalMinY = topY - VIEW_PAD;
-  const naturalMaxY = baseBottomY + VIEW_PAD;
-  const naturalHeight = naturalMaxY - naturalMinY;
-
+  const naturalHeight = baseBottomY + VIEW_PAD - naturalMinY;
   const viewMinY =
-    naturalHeight <= VIEW_H ? naturalMinY - (VIEW_H - naturalHeight) / 2 : naturalMinY;
+    naturalHeight <= viewH ? naturalMinY - (viewH - naturalHeight) / 2 : naturalMinY;
 
-  const viewBox = `${-VIEW_W / 2} ${viewMinY} ${VIEW_W} ${VIEW_H}`;
+  const viewBox = `${-VIEW_W / 2} ${viewMinY} ${VIEW_W} ${viewH}`;
 
   return (
-    <div className="flex flex-col items-center gap-4">
-      <p className="font-mono text-sm text-neutral-500">Score {score}</p>
+    <div
+      ref={stageRef}
+      onPointerDown={(e) => {
+        if (e.button === 0) handleActivate();
+      }}
+      className="relative h-full max-h-[780px] w-full max-w-[520px] touch-manipulation overflow-hidden rounded-[var(--radius-card)] select-none"
+      aria-label="Stack game. Press space or tap to drop the block."
+    >
+      <StackBackground score={score} />
 
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={handleActivate}
-        onKeyDown={(e) => {
-          if (e.key === " " || e.key === "Enter") {
-            e.preventDefault();
-            handleActivate();
-          }
-        }}
-        className="relative select-none overflow-hidden rounded-xl border border-black/10 outline-none dark:border-white/10"
-        style={{ width: CANVAS_W, height: CANVAS_H }}
-      >
-        <StackBackground score={score} />
+      <svg className="absolute inset-0 h-full w-full" viewBox={viewBox} aria-hidden>
+        <Ground score={score} />
 
-        <svg
-          className="relative transition-[view-box] duration-150 ease-out"
-          width={CANVAS_W}
-          height={CANVAS_H}
-          viewBox={viewBox}
-        >
-          <Ground score={score} />
+        {blocks.map((block, i) => (
+          <BlockMesh key={i} block={block} index={i} />
+        ))}
 
-          {blocks.map((block, i) => (
-            <BlockMesh key={i} block={block} index={i} />
-          ))}
+        {debris.map((d) => (
+          <g
+            key={d.id}
+            className="debris-fall-3d"
+            style={
+              {
+                "--fall-x": `${d.fallX}px`,
+                "--fall-y": `${d.fallY}px`,
+                "--fall-rotate": `${d.fallRotate}deg`,
+              } as React.CSSProperties
+            }
+          >
+            <BlockMesh block={d} index={Math.round(d.bottom / BLOCK_HEIGHT)} />
+          </g>
+        ))}
 
-          {debris.map((d) => (
-            <g
-              key={d.id}
-              className="debris-fall-3d"
-              style={
-                {
-                  "--fall-x": `${d.fallX}px`,
-                  "--fall-y": `${d.fallY}px`,
-                  "--fall-rotate": `${d.fallRotate}deg`,
-                } as React.CSSProperties
-              }
-            >
-              <BlockMesh block={d} index={Math.round(d.bottom / BLOCK_HEIGHT)} />
-            </g>
-          ))}
-
-          {current && phase === "playing" && (
-            <BlockMesh block={current} index={blocks.length} opacity={0.95} />
-          )}
-        </svg>
-
-        {phase === "idle" && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="rounded-full bg-[var(--game-accent)] px-6 py-2 font-semibold text-white shadow-lg">
-              Tap to start
-            </span>
-          </div>
+        {current && phase === "playing" && (
+          <BlockMesh block={current} index={blocks.length} opacity={0.95} />
         )}
+      </svg>
 
-        {phase === "over" && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/40 backdrop-blur-sm">
-            <p className="text-lg font-semibold text-white">Tower of {score}</p>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                start();
-              }}
-              className="rounded-full bg-white px-5 py-2 text-sm font-semibold text-black"
-            >
-              Try again
-            </button>
-          </div>
+      <div className="pointer-events-none absolute inset-x-0 top-0 flex flex-col items-center pt-6">
+        {phase !== "idle" && (
+          <span className="font-display text-7xl leading-none font-bold text-white drop-shadow-[0_2px_6px_rgb(0_0_0/0.25)]">
+            {score}
+          </span>
         )}
       </div>
 
-      <p className="text-xs text-neutral-500">
-        Click, tap, or press space to drop the block.
+      {best !== null && (
+        <span className="pill absolute top-3 right-3">
+          Best <strong>{best}</strong>
+        </span>
+      )}
+
+      {phase === "idle" && (
+        <div className="overlay">
+          <span className="btn">Tap to start</span>
+          <p className="pill">Drop each block right on top of the last one</p>
+        </div>
+      )}
+
+      {phase === "over" && (
+        <div className="overlay overlay-dim">
+          <p className="font-display text-3xl font-bold">
+            {isNewBest ? "New best!" : "Tower down"}
+          </p>
+          <p className="text-white/80">
+            {score} {score === 1 ? "block" : "blocks"} high
+          </p>
+          <button
+            type="button"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={start}
+            className="btn btn-light mt-2"
+          >
+            Try again
+          </button>
+        </div>
+      )}
+
+      <p className="pointer-events-none absolute inset-x-0 bottom-3 hidden text-center text-xs text-ink/50 sm:block">
+        Click, tap or press space
       </p>
     </div>
   );
