@@ -8,31 +8,41 @@ the browser.
 
 ## Difficulty
 
-| Levels  | Grid                     | Swatches                                     |
-| ------- | ------------------------ | -------------------------------------------- |
-| 1-9     | 3 × 2                    | Vivid colors with clearly different hues     |
-| 10-14   | 4 × 4                    | Slight variations of the target              |
-| 15-19   | 5 × 5                    | Variations get subtler every level           |
-| 20+     | +1 row and column every 5 levels, up to 8 × 8 | Down to tiny differences, like a color-vision test |
+Difficulty rises smoothly on two axes:
 
-On hard levels every distractor is offset from the target by the same
-amount (`delta`) in a random direction of hue, saturation and lightness, so
-none is ever an exact match but they all look alike at a glance. `delta`
-starts at `START_DELTA` on level 10 and shrinks by `DELTA_STEP` per level
-down to `MIN_DELTA`.
+| Levels | Grid  | Swatches                                            |
+| ------ | ----- | --------------------------------------------------- |
+| 1-5    | 3 × 2 | Vivid colors with clearly different hues            |
+| 6-12   | 3 × 3 | Variations of the target, still far apart           |
+| 13-26  | 4 × 4 | Variations getting closer every level               |
+| 27-36  | 5 × 5 |                                                     |
+| 37-46  | 6 × 6 |                                                     |
+| 47-56  | 7 × 7 |                                                     |
+| 57+    | 8 × 8 | Tiny differences, like a color-vision test          |
+
+From level 6, every distractor is offset from the target by the same
+distance `delta` in a random direction of hue, saturation and lightness, so
+none is an exact match but they all look alike at a glance. `delta` decays
+exponentially: `MIN_DELTA + (START_DELTA - MIN_DELTA) * exp(-(level - 1) / DECAY_LEVELS)`,
+which gives about 31 at level 10, 11.6 at level 25, 5.4 at level 40 and
+approaches 2.5. Tune it with the constants at the top of `rounds.ts`.
 
 ## Files
 
 | File             | Role                                                              |
 | ---------------- | ----------------------------------------------------------------- |
 | `manifest.ts`    | Title, description, theme                                         |
-| `Game.tsx`       | State and layout: level, target card, messages, result            |
-| `SwatchGrid.tsx` | The grid of swatches; sizes itself to the screen for any grid size |
+| `Game.tsx`       | State, sounds and layout: level, target card, messages, result    |
+| `Intro.tsx`      | Start screen: shifting mosaic with an odd tile, title, Start      |
+| `Title.tsx`      | "Color Match" logo, each letter of "Color" in its own hue          |
+| `SwatchGrid.tsx` | The grid; fits any size and screen, swatches pop in each level    |
 | `rounds.ts`      | Level rules (grid size, difficulty) and color generation          |
 | `Thumbnail.tsx`  | Home tile art: a target card and a grid with the match ticked     |
 
 ## Notes
 
+- Swatches pop in one after another on every level, the right pick pops
+  with a check mark, a wrong one shakes the target and reveals the answer.
 - Easy-level swatches are at least `MIN_HUE_GAP` degrees of hue apart from
   each other, so no early round has two swatches that look identical.
 - The grid's width is `min(86vw, 26rem, --grid-h × cols / rows)`, so it fits
