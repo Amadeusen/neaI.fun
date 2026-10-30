@@ -37,7 +37,7 @@ export function ColorMatchIntro({ onStart }: { onStart: () => void }) {
         <div>
           <h2 className="font-display text-3xl font-bold sm:text-4xl">How sharp are your eyes?</h2>
           <p className="mx-auto mt-2 max-w-72 text-ink-muted">
-            Find the exact color. Easy at first… then the grid grows and the shades creep closer.
+            Find the exact color before the clock runs out. Every right pick adds 5 seconds, and you have three hearts.
           </p>
         </div>
         <button type="button" onClick={onStart} className="btn px-10 text-xl">
