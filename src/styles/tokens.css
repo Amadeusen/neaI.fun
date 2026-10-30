@@ -1,14 +1,14 @@
 /*
  * Design tokens shared by every screen.
  *
- * The site is deliberately plain: a white page, black ink, soft grey surfaces
+ * The site is deliberately plain: a very light beige page, black ink, soft grey surfaces
  * and big rounded tiles. Each game screen re-tints itself by overriding the
  * `--screen-*` and `--game-accent` variables (GameScreen sets them inline from
  * the game's manifest), so screens can look different while sharing the same
  * buttons, pills and overlays.
  */
 :root {
-  --page-bg: #ffffff;
+  --page-bg: #fcfaf6;
   --ink: #111111;
   --ink-muted: #6b6b6b;
   --line: rgb(0 0 0 / 0.1);

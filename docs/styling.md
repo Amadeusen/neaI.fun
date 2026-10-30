@@ -1,6 +1,6 @@
 # Styling
 
-The look is deliberately simple: a white home page, black ink, big flat
+The look is deliberately simple: a very light beige home page, black ink, big flat
 rounded tiles, and one rounded display font (Fredoka). Each game screen
 keeps the same building blocks but re-tints itself.
 
