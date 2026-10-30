@@ -9,13 +9,18 @@ export const SPEED_STEP = 3.5;
 export const MAX_SPEED = 220;
 export const MIN_OVERLAP = 4;
 
-export const CANVAS_W = 300;
-export const CANVAS_H = 420;
-export const VIEW_W = 190;
-export const VIEW_H = (VIEW_W * CANVAS_H) / CANVAS_W;
+/** Width of the world slice the camera shows; its height follows the stage's aspect ratio. */
+export const VIEW_W = 270;
 export const VIEW_PAD = 24;
+/** Stage aspect ratio (width / height) used before the real size is measured. */
+export const DEFAULT_ASPECT = 300 / 420;
 
 /** World x/y are stored in [0, GAME_SIZE]; geometry is projected centered on this. */
 export const CENTER = GAME_SIZE / 2;
 
 export const HUE_STEP = 5;
+
+/** A drop this close (in world units) to the block below counts as perfect and snaps. */
+export const PERFECT_TOLERANCE = 3;
+/** Every this-many perfect drops in a row, the tower grows back one trimmed size. */
+export const REGROW_EVERY = 3;

@@ -1,128 +1,89 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Confetti } from "@/components/game/Confetti";
+import { cn } from "@/lib/utils";
+import { Hud } from "./Hud";
+import { ColorMatchIntro } from "./Intro";
+import { isNewGridLevel, VARIATIONS_FROM } from "./rounds";
+import { SwatchGrid } from "./SwatchGrid";
+import { useColorMatch } from "./useColorMatch";
 
-const TOTAL_ROUNDS = 10;
-const SWATCH_COUNT = 6;
-
-type Phase = "idle" | "playing" | "done";
-
-function randomHsl(): string {
-  const hue = Math.floor(Math.random() * 360);
-  const saturation = 65 + Math.floor(Math.random() * 20);
-  const lightness = 45 + Math.floor(Math.random() * 15);
-  return `hsl(${hue} ${saturation}% ${lightness}%)`;
-}
-
-function buildRound(): { target: string; options: string[] } {
-  const target = randomHsl();
-  const options = [target];
-  while (options.length < SWATCH_COUNT) {
-    options.push(randomHsl());
-  }
-  // Shuffle in place.
-  for (let i = options.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [options[i], options[j]] = [options[j], options[i]];
-  }
-  return { target, options };
-}
-
+/**
+ * Color Match: find the exact color, level after level, against the clock
+ * and with three hearts. Rules live in useColorMatch (state) and rounds.ts
+ * (levels and colors); this component lays out the screens.
+ */
 export default function ColorMatch() {
-  const [phase, setPhase] = useState<Phase>("idle");
-  const [round, setRound] = useState(0);
-  const [score, setScore] = useState(0);
-  const [current, setCurrent] = useState(() => buildRound());
-  const [feedback, setFeedback] = useState<"correct" | "wrong" | null>(null);
+  const game = useColorMatch();
+  const { round, level, cleared } = game;
+  const inRun = game.phase === "playing" || game.phase === "reveal";
 
-  const start = () => {
-    setPhase("playing");
-    setRound(1);
-    setScore(0);
-    setCurrent(buildRound());
-    setFeedback(null);
-  };
-
-  const pick = (color: string) => {
-    if (phase !== "playing" || feedback) return;
-
-    if (color !== current.target) {
-      setFeedback("wrong");
-      window.setTimeout(() => setPhase("done"), 400);
-      return;
-    }
-
-    setFeedback("correct");
-    window.setTimeout(() => {
-      if (round >= TOTAL_ROUNDS) {
-        setScore((s) => s + 1);
-        setPhase("done");
-        return;
-      }
-      setScore((s) => s + 1);
-      setRound((r) => r + 1);
-      setCurrent(buildRound());
-      setFeedback(null);
-    }, 250);
-  };
-
-  const gridCols = useMemo(() => {
-    return SWATCH_COUNT % 3 === 0 ? "grid-cols-3" : "grid-cols-2";
-  }, []);
+  let message = "";
+  if (game.phase === "reveal") message = game.lives === 0 ? "Out of hearts!" : "Time's up!";
+  else if (game.wrongPicks.length > 0 && game.solved === null) message = "Not that one, try again!";
+  else if (game.solved === null && game.healedLevel === level) message = "Heart restored! ❤️";
+  else if (game.solved === null && level === VARIATIONS_FROM) message = "Now the shades get closer…";
+  else if (game.solved === null && isNewGridLevel(level)) message = "Bigger grid!";
 
   return (
-    <div className="flex flex-col items-center gap-6 text-center">
-      {phase === "idle" && (
-        <button
-          type="button"
-          onClick={start}
-          className="rounded-full bg-[var(--game-accent)] px-8 py-3 text-lg font-semibold text-white shadow-lg transition-transform active:scale-95"
-        >
-          Start
-        </button>
+    <div className="flex h-full w-full max-w-xl flex-col items-center justify-center gap-[2.5dvh] text-center">
+      {inRun && (
+        <Hud
+          lives={game.lives}
+          streak={game.streak}
+          msLeft={game.msLeft}
+          bonusId={game.bonusId}
+          level={level}
+        />
+      )}
+      {!inRun && game.best !== null && (
+        <span className="pill">
+          Best <strong>{game.best}</strong>
+        </span>
       )}
 
-      {phase !== "idle" && (
-        <div className="font-mono text-sm text-neutral-500">
-          Round {Math.min(round, TOTAL_ROUNDS)}/{TOTAL_ROUNDS} · Score {score}
+      {game.phase === "idle" && <ColorMatchIntro onStart={game.start} />}
+
+      {inRun && round && (
+        <div className="flex flex-col items-center gap-[2.5dvh] [--grid-h:44dvh] [@media(max-height:500px)]:flex-row [@media(max-height:500px)]:[--grid-h:62dvh]">
+          <div className="flex flex-col items-center gap-2">
+            <p className="text-sm text-ink-muted">Find this color</p>
+            <div
+              key={`${level}-${game.wrongPicks.length}`}
+              className={cn(
+                "h-[min(12dvh,6rem)] w-[min(60vw,14rem)] rounded-[var(--radius-card)] shadow-[inset_0_0_0_1px_rgb(0_0_0/0.08)]",
+                game.wrongPicks.length > 0 ? "shake" : "pop",
+              )}
+              style={{ background: round.target }}
+            />
+          </div>
+          <SwatchGrid
+            key={level}
+            round={round}
+            wrongPicks={game.wrongPicks}
+            solved={game.solved}
+            reveal={game.phase === "reveal"}
+            onPick={game.pick}
+          />
         </div>
       )}
 
-      {phase === "playing" && (
-        <>
-          <p className="text-sm text-neutral-500">Find this color:</p>
-          <div
-            className="h-20 w-40 rounded-xl border border-black/10 shadow-inner"
-            style={{ background: current.target }}
-          />
-          <div className={`grid ${gridCols} gap-3`}>
-            {current.options.map((color, i) => (
-              <button
-                key={`${color}-${i}`}
-                type="button"
-                onClick={() => pick(color)}
-                className="h-16 w-16 rounded-lg border border-black/10 transition-transform hover:scale-105 active:scale-95 sm:h-20 sm:w-20"
-                style={{ background: color }}
-                aria-label={`Swatch ${i + 1}`}
-              />
-            ))}
-          </div>
-          {feedback === "wrong" && (
-            <p className="font-semibold text-red-500">Not quite!</p>
-          )}
-        </>
+      {inRun && (
+        <p key={message} className="pop h-6 font-semibold" aria-live="polite">
+          {message}
+        </p>
       )}
 
-      {phase === "done" && (
-        <div className="flex flex-col items-center gap-3">
-          <p className="text-xl font-semibold">
-            You matched {score} of {TOTAL_ROUNDS}
+      {game.phase === "done" && (
+        <div className="relative flex flex-col items-center gap-4">
+          {game.isNewBest && <Confetti />}
+          <p className="pop font-display text-4xl font-bold">
+            {game.isNewBest ? "New best!" : "Run over"}
           </p>
-          <button
-            type="button"
-            onClick={start}
-            className="rounded-full border border-current px-5 py-2 text-sm font-medium transition-opacity hover:opacity-70"
-          >
+          <p className="text-ink-muted">
+            You cleared {cleared} {cleared === 1 ? "level" : "levels"}
+          </p>
+          <button type="button" onClick={game.start} className="btn">
             Play again
           </button>
         </div>

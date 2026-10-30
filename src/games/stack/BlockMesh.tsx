@@ -4,7 +4,7 @@ import { faces } from "./geometry";
 import { BLOCK_HEIGHT, HUE_STEP } from "./constants";
 import type { Block } from "./types";
 
-const [ACCENT_HUE, ACCENT_SAT, ACCENT_LIGHT] = hexToHsl(manifest.accentColor);
+const [ACCENT_HUE, ACCENT_SAT, ACCENT_LIGHT] = hexToHsl(manifest.theme.accent);
 
 /** Renders one block as three shaded isometric faces; hue rotates with layer index. */
 export function BlockMesh({

@@ -1,25 +1,34 @@
 import type { ComponentType } from "react";
 
-export interface GameManifest {
-  /** URL-safe unique identifier, also used as the route segment (/games/[slug]). */
-  slug: string;
-  /** Short display name shown on the card and game page. */
-  title: string;
-  /** One-line hook shown on the home page card. */
-  tagline: string;
-  /** Longer blurb shown on the game's own page. */
-  description: string;
-  /** Hex color used to tint the card and page accents. */
-  accentColor: string;
-  /** Single emoji used as the game's icon (keeps the project asset-free). */
-  emoji: string;
-  /** Freeform tags for future filtering/search. */
-  tags: string[];
+export interface GameTheme {
+  /** Main brand color of the game: buttons, highlights, focus rings. */
+  accent: string;
+  /** Background of the game's own screen. */
+  background: string;
+  /** Background of the game's tile on the home page. */
+  tile: string;
 }
 
-export type GameComponentLoader = () => Promise<{ default: ComponentType }>;
+export interface GameManifest {
+  /**
+   * URL-safe unique identifier. Must match the route folder name,
+   * i.e. the game lives at `src/app/<slug>/page.tsx` and is served at `/<slug>`.
+   */
+  slug: string;
+  /** Short display name shown on the tile and in the game's top bar. */
+  title: string;
+  /** Longer blurb used for the page's meta description. */
+  description: string;
+  /** Single emoji icon, e.g. on a start screen (keeps the project asset-free). */
+  emoji: string;
+  theme: GameTheme;
+}
 
-export interface GameEntry {
+/** What the home page needs to show one game: its data and its tile art. */
+export interface GameListing {
   manifest: GameManifest;
-  load: GameComponentLoader;
+  /** Static illustration drawn on the game's home page tile. */
+  Thumbnail: ComponentType;
+  /** The game's stylized title logo, also used in its top bar. */
+  Title: ComponentType;
 }

@@ -1,0 +1,18 @@
+/* Element-level defaults. */
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--screen-bg);
+  color: var(--screen-ink);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+:focus-visible {
+  outline: 3px solid var(--game-accent);
+  outline-offset: 3px;
+}

@@ -8,6 +8,12 @@ const isGithubPages = process.env.GITHUB_PAGES === "true";
 const nextConfig: NextConfig = {
   output: "export",
   images: { unoptimized: true },
+  // Emit `/stack/index.html` instead of `/stack.html`, which GitHub Pages
+  // serves reliably at `/stack/` without any server rewrites.
+  trailingSlash: true,
+  // Hide the floating "N" dev-tools badge; build/runtime errors still show
+  // as a full-screen overlay in `next dev`.
+  devIndicators: false,
   ...(isGithubPages
     ? { basePath: `/${repoName}`, assetPrefix: `/${repoName}/` }
     : {}),
